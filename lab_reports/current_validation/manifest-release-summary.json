@@ -1,0 +1,52 @@
+{
+  "variant": "release",
+  "package": "com.phonoteka",
+  "allowBackup": "false",
+  "usesCleartextTraffic": "false",
+  "networkSecurityConfig": "@xml/network_security_config",
+  "debuggable": "false",
+  "components": [
+    {
+      "kind": "activity",
+      "name": "com.phonoteka.MainActivity",
+      "exported": "true",
+      "permission": null
+    },
+    {
+      "kind": "activity",
+      "name": "com.phonoteka.InviteActivity",
+      "exported": "false",
+      "permission": null
+    },
+    {
+      "kind": "service",
+      "name": "com.phonoteka.player.PlaybackService",
+      "exported": "false",
+      "permission": null
+    },
+    {
+      "kind": "service",
+      "name": "androidx.camera.core.impl.MetadataHolderService",
+      "exported": "false",
+      "permission": null
+    },
+    {
+      "kind": "service",
+      "name": "androidx.room.MultiInstanceInvalidationService",
+      "exported": "false",
+      "permission": null
+    },
+    {
+      "kind": "receiver",
+      "name": "androidx.profileinstaller.ProfileInstallReceiver",
+      "exported": "true",
+      "permission": "android.permission.DUMP"
+    },
+    {
+      "kind": "provider",
+      "name": "androidx.startup.InitializationProvider",
+      "exported": "false",
+      "permission": null
+    }
+  ]
+}

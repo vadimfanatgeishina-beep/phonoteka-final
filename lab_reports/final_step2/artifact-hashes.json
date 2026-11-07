@@ -1,0 +1,17 @@
+[
+  {
+    "path": "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+    "bytes": 1141342,
+    "sha256": "02bee09f758ff5eead235a063664d9b351c405e6b411c38c88f07fdd13b00571"
+  },
+  {
+    "path": "app/build/outputs/apk/debug/app-debug.apk",
+    "bytes": 27535467,
+    "sha256": "bf465c05bda5bad341c5fbb41ec718fdd6f30a63784eccc73bb91a938ec9856a"
+  },
+  {
+    "path": "app/build/outputs/apk/release/app-release-unsigned.apk",
+    "bytes": 5033210,
+    "sha256": "7f4a3f81f7000096b65344c814da97ad134cf753f7a857925c4d031f6de1fe96"
+  }
+]

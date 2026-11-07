@@ -1,0 +1,100 @@
+{
+  "baseline": "Phonoteka-final-step1-source.zip (safe synthetic imported snapshot)",
+  "git_apply_check": "PASS",
+  "git_apply": "PASS",
+  "changed_file_content_comparison": "PASS",
+  "files": [
+    {
+      "path": "AUDIT_REPORT.md",
+      "sha256": "a74e80b8719141c71e11f9e03e7ce4ad78cb83fd047a9fb6b6841736892e69a7"
+    },
+    {
+      "path": "FINAL_STEP2.md",
+      "sha256": "44d680a22f14f8ed6694f5a9b3a0fa86d7f1f29b00f93936bcdac21bbc93a656"
+    },
+    {
+      "path": "LAB_REQUIREMENTS.md",
+      "sha256": "59d8c7730c20eb8e8155168514989160def12c25e2d6be65c70da25b07428222"
+    },
+    {
+      "path": "README.md",
+      "sha256": "265cbe1d6cd50d6443861af6ca7b4e9c10a76f40f508b35be2b0c1ff5715ae82"
+    },
+    {
+      "path": "app/src/androidTest/java/com/phonoteka/security/BiometricRefreshVaultPolicyTest.kt",
+      "sha256": "10996a120ac4d896daabde170f1e6678532cf140d8d3960af5d95196e6aba279"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/MainActivity.kt",
+      "sha256": "ebc0a49e27117d1ada5918596ff5bc07769b837f5158a8fd49d552428a207298"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/PhonotekaApp.kt",
+      "sha256": "4caebd19679785b25644fa204bb30c72da2b2aa5d09f6c3c515a37b5148a99fe"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/AndroidBiometricRefreshVault.kt",
+      "sha256": "2663e3eac07cca5583ae97b003b07f07fea29b926e99dde5ab8b68507f3ca32d"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/BiometricSessionFlow.kt",
+      "sha256": "cd3682369e956c4997f9d6410f2bf422e1b38b77115c6d75deb7ae7d70d952e9"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "sha256": "663c7b1ec46c201231690e35d202385fd9e32df1f16302173cf4c30d420a2773"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/MockAuthSession.kt",
+      "sha256": "f080ffe255b5279c97e1eab4a74c94ba68b3629fe273d8618135efce35ef9bb4"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/ui/screens/AuthGateScreen.kt",
+      "sha256": "54faa1158263c7f02c0ab8c54554483bca12fb3389a0a59e435ee77a5b56e9b1"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/ui/screens/Lab13MockAuthScreen.kt",
+      "sha256": "96667358f89270c5c0b811ea6d016b8a7814e9df601753c2a45cd3313103e3b5"
+    },
+    {
+      "path": "app/src/test/java/com/phonoteka/security/BiometricSessionFlowTest.kt",
+      "sha256": "605abeb342de917db4dbd64a1e275786db661acf813e7ba6f0e5fd3a700c838d"
+    },
+    {
+      "path": "gradlew",
+      "sha256": "9cbbb4d68ff7fb5211c4d58f598ac9d8664c05fdcd1e5f59b7f2c3ac1ee00af0"
+    },
+    {
+      "path": "lab_reports/final_step2/RESULTS.md",
+      "sha256": "cef91c419dd865c7bfacef3478ac4a0cafec8dc5aac26d7a8cda9808c747a22d"
+    },
+    {
+      "path": "lab_reports/final_step2/apk-signature-check.txt",
+      "sha256": "0184b62635bae35647d1a4d64e2022ceedd5c388698bc6aa12be5fcd4ad14eeb"
+    },
+    {
+      "path": "lab_reports/final_step2/artifact-hashes.json",
+      "sha256": "afffacc9d4d4bafdc9c5031530c9e993ffc15af01ccc54ec170af071b33e3020"
+    },
+    {
+      "path": "lab_reports/final_step2/final-build.txt",
+      "sha256": "ca741ce3561f98cb71374f9ec992d2e6a515a0110c33f3b7ec1c765ab6a6bb02"
+    },
+    {
+      "path": "lab_reports/final_step2/jvm-results.json",
+      "sha256": "ff4e91d78d6b533925c0ff745f2f90d3bfbf7abc222928f4f92e6b364a4427a6"
+    },
+    {
+      "path": "lab_reports/final_step2/lint-results-debug.xml",
+      "sha256": "9fcd9ca160e1cdc632b9884b38b29bf7aba1d231172a5134e7dfa6a61607262d"
+    },
+    {
+      "path": "lab_reports/final_step2/lint-summary.json",
+      "sha256": "5966d3207f8b60de4372c45f8344b319882871b0ac525a972082c652cab6be98"
+    },
+    {
+      "path": "lab_reports/final_step2/verified-source-hashes.json",
+      "sha256": "9c32b1bac0348f6b72e42da9b807016ab34ede17e11e81a0be55e5fe26223fba"
+    }
+  ]
+}

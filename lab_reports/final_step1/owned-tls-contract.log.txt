@@ -1,0 +1,13 @@
+Local Java nonce/result/status regression: OK
+Owned local Java WSS frame regression: OK
+POST -> accepted
+POST -> Replay
+POST -> Signature
+POST -> accepted
+POST -> Clock
+Owned HTTPS contract: accepted/replay409/tamper401/nonce-not-consumed/clock401 PASS
+TLSv1.2: owned client/server handshake accepted
+TLSv1.3: owned client/server handshake accepted
+TLSv1.0: SERVER fatal protocol_version alert observed on owned loopback
+TLSv1.1: SERVER fatal protocol_version alert observed on owned loopback
+Ephemeral private fixture material deleted; no real accounts/keys/network used

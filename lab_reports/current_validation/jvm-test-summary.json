@@ -1,0 +1,366 @@
+{
+  "scope": "Final expanded source with jsoup1.23.2; local JDK17 JVM, not Android device",
+  "suites": [
+    {
+      "name": "com.phonoteka.data.LibraryBackupCodecTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "emptyLibraryRoundTripsWithVersion",
+        "rejectsUnsupportedVersionAndInvalidJson"
+      ]
+    },
+    {
+      "name": "com.phonoteka.data.LocalAudioMatcherTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "normalize_foldsCaseYoAndWhitespace",
+        "index_skipsWhenFilenameContradictsFullTags",
+        "index_matchesOnExactNormalizedTags",
+        "index_fallsBackToFilename_whenTagsAreAbsent_andStripsExtension",
+        "index_returnsNullWhenNothingMatches",
+        "parseArtistTitle_preservesArtistHyphens_andSplitsOnFirstSeparator",
+        "index_skipsAmbiguousDuplicateCatalogueEntries",
+        "parseArtistTitle_splitsOnSpacedSeparators_only",
+        "index_matchesCyrillicCaseAndYoInsensitively",
+        "index_doesNotReplaceRemixOrLiveWithOriginal"
+      ]
+    },
+    {
+      "name": "com.phonoteka.data.notes.AuthorizedNotesStepUpTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "repositoryImportCannotRunBeforeFreshOperationSpecificApproval"
+      ]
+    },
+    {
+      "name": "com.phonoteka.data.notes.TrackNotesRepositoryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "failedIndexCommitLeavesEntirePreviousCatalogVisible",
+        "tamperedManifestAndInvalidImportAreRejectedWithoutReplacingData",
+        "encryptedRoundTripAndDraftSurviveRepositoryRecreation",
+        "corruptedRevisionFallsBackToPreviousAuthenticatedRevision",
+        "v1ImportAddsPinnedAndExportUsesVersionTwo",
+        "trashRestoresBeforeTtlAndPurgesAfterThirtyDays"
+      ]
+    },
+    {
+      "name": "com.phonoteka.network.AudioDownloaderLimitsTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "oversizeKnownAndChunkedBodiesPreserveOldDestinationAndRemovePartial",
+        "oversizedPlaylistAndTlsToHttpRedirectAreRejected"
+      ]
+    },
+    {
+      "name": "com.phonoteka.network.PostCatalogApiContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "retrofitUsesExpectedJsonPlaceholderRouteAndDtoShape"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.LocalHttpsMockServerTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "pinnedHttpsAcceptsSignedQueryAndRejectsWrongPin"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.LocalLiveSocketTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "reflectedRequestIsNotAcceptedAsSignedResponse",
+        "signedResponseIsReceivedAndReconnectUsesFreshConnectionChannel"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.LocalWssMockServerTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "pinnedLocalWssAcceptsSignedFrame"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.MockAuthSessionTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "failedCleanupStillCannotRestoreTheAlreadyConsumedRefresh",
+        "recreatedClientRefreshesRotatesRejectsReplayAndLogoutRevokes",
+        "lockedWritePreflightDoesNotConsumeRefreshOrLoseCiphertext",
+        "ledgerContainsOnlyDigestsAndRotatedTokenCannotBeReused",
+        "defaultLockoutLastsFiveMinutesAndSurvivesEndpointRecreation",
+        "fourthBadLoginLocksAndCorrectLoginWaitsForTimeout",
+        "rotationWriteFailureRevokesReplacementAndRequiresFreshLogin"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.MockInviteAuthorityTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "forgedRoleTamperedTrackAndUnknownIssuanceNeverConsumeValidInvite",
+        "adminIssuesSecurityConsumesOnceAndEmployeeCannotScan",
+        "exactTtlRestartRevocationAndCapacityFailClosed"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.MockRoleAuthorityTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "readonlySecurityCannotWriteAndChangingRoleRevokesOldAdmin",
+        "forgedRoleScopesOrTokenCannotReadAudit",
+        "grantExpiresAtFiveMinutes"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.OwnedCertificateSubstitutionTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "trustedSubstituteCertificateCannotBypassOriginalSpkiPin"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.OwnedQrEncodingTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "ownedSignedInvitationSurvivesEncodeDecodeAndStillRequiresAuthority"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.RequestSigningTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "signatureBindsEncodedQueryToo",
+        "replayGuardBoundsNonceMemoryAndRecoversAfterWindowExpires",
+        "futureTimestampCannotBeReplayedBeforeInclusiveExpiry",
+        "signatureBindsMethodPathAndBodyAndRejectsReplay",
+        "overflowingTimestampIsExpiredInsteadOfPassingTheWindowCheck"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.RiskStepUpTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "sensitiveOperationRequiresNewAuthenticationAndIsBoundToOperationAndVersion",
+        "cancellationProcessRecreationAndRoleChangeDoNotRetainApproval",
+        "exactFiveMinutesFutureAuthAndExpiredChallengeFailClosed",
+        "debuggerOrLongResumeElevatesExportButDoesNotBanNormalReadsOrEmulators"
+      ]
+    },
+    {
+      "name": "com.phonoteka.security.SignedWebSocketFrameTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "futureFrameCannotBeReplayedBeforeInclusiveExpiry",
+        "frameBindsChannelPayloadTimestampAndOneTimeNonce",
+        "replayGuardRejectsNewFramesWhenItsWindowCacheIsFull"
+      ]
+    },
+    {
+      "name": "com.phonoteka.ui.permissions.PermissionFlowPolicyTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "firstRequestAndRetryExplainBeforeRequest",
+        "repeatedDenialOffersSettingsAndGrantNeverReRequests"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.CatalogRetryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "onlyNetworkFailuresRetryWithOneTwoFourSecondBackoff",
+        "httpFailureDoesNotRetryAndRawQueryUpdatesImmediately"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.PlaybackQueueTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "downloadedTracksEnterQueue",
+        "unplayableSelectionCannotStartAnotherTrack",
+        "downloadedFileIsPlayable",
+        "remoteRawAndMissingUrisAreRejected",
+        "sessionMetadataRestoresIdentityAndLocalUri",
+        "invalidSessionIdentityIsNotInvented",
+        "queueRetainsCatalogueOrderAndExcludesUnboundTracks",
+        "missingSessionUriStillDisplaysMetadataWithoutFakeBinding",
+        "localDoneDocumentIsPlayable",
+        "sessionMetadataRestoresDownloadedFileUri",
+        "pendingAndErrorBindingsAreNotPlayable",
+        "missingSelectedTrackIsAppendedExactlyOnce",
+        "selectedTrackUsesLatestFileBinding"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.PostCatalogDetailFlowTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "networkErrorPreservesCacheAndMarksDetailOffline",
+        "oldNonCooperativeRefreshCannotReplaceNewDetailOrItsErrorFlags",
+        "savedDetailIdRestoresObservationWithoutDuplicateScreenRefresh",
+        "emptyCacheReceivesPostAndCommentsFromRefreshAndLaterRoomUpdates"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.PostCatalogViewModelTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "catalogQueryIsRestoredFromSavedStateHandle",
+        "quickSearchUsesOnlyLastDebouncedQuery",
+        "networkFailureKeepsCachedPostsAndMarksOffline"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.RoleGuardViewModelTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "directViewModelMutationIsRejectedWithoutUi"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.SettingsPersistenceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "themeAndForceDarkSurviveNewStoreAndViewModel"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.TrackDetailViewModelTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "attachAudio_cancellation_clearsBusy",
+        "uiState_successOnlyAfterInitialImportCompletes",
+        "clearError_resetsSurfacedError",
+        "attachAudio_secondTapWhileFirstInFlight_isIgnored",
+        "attachAudio_failure_surfacesError_clearsBusy_andNeverUpdatesStatus",
+        "uiState_missingTrack_showsNotFound",
+        "trackFlowFailure_showsError",
+        "uiState_startsLoading_thenSuccess",
+        "importFailure_showsError"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.TrackInviteViewModelTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "deniedScanNeverShowsTrackOrRetainsWireAndBusyResets",
+        "stepUpDenialDoesNotPerformIssueAndClearRemovesReceipt",
+        "lateNonCooperativeIssueCannotRestoreReceiptAfterClear"
+      ]
+    },
+    {
+      "name": "com.phonoteka.viewmodel.TrackListViewModelTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "searchQueryField_matchesCaseInsensitively_andCombinesWithStatus",
+        "filterTracks_matchesDisplayNameAndSearchQuery_andStatus",
+        "playbackCatalogue_isIndependentOfQueryStatusAndPage",
+        "emptyLibrary_showsEmpty_notSuccess",
+        "addTrackDraftRestoresFromSavedStateHandle",
+        "importFailure_showsError_thenRetrySucceeds",
+        "repeatedRefresh_importsOnlyOnce_whileLoadInFlight",
+        "clearWhileBackoffScheduled_cancelsFutureImport",
+        "importAudio_duplicateWhileInFlight_isIgnored_clearCancelsAndReleasesBusy",
+        "queryAndStatusFilter_areAppliedTogether",
+        "searchQuery_updatesImmediately_butFilteringIsDebounced300ms",
+        "libraryUpdate_isReflectedWithoutRefresh_noStaleCache",
+        "importAudio_success_reportsMessage_andIgnoresEmptySelection",
+        "unmatchedStatusFilter_yieldsEmpty",
+        "retryDelay_isExponential_andCappedAt8s",
+        "statusChange_afterLoadMore_resetsPageLimitTo100",
+        "retry_waitsOutBackoffBeforeCallingImport",
+        "uiState_startsLoading_thenSuccess",
+        "repeatedRetry_whileBackoffPending_importsOnlyOnce",
+        "loadMore_pagesBy100_thenQueryResetsPage",
+        "importAudio_failure_surfacesMessageAndClearsBusy"
+      ]
+    }
+  ],
+  "totals": {
+    "tests": 112,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

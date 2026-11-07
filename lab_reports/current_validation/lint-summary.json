@@ -1,0 +1,443 @@
+{
+  "scope": "AGP lintDebug, not runtime acceptance",
+  "severities": {
+    "Warning": 58,
+    "Information": 4
+  },
+  "issues": [
+    {
+      "id": "ApplySharedPref",
+      "severity": "Warning",
+      "message": "Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background",
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "line": "44"
+    },
+    {
+      "id": "ApplySharedPref",
+      "severity": "Warning",
+      "message": "Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background",
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "line": "57"
+    },
+    {
+      "id": "ApplySharedPref",
+      "severity": "Warning",
+      "message": "Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background",
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "line": "69"
+    },
+    {
+      "id": "ApplySharedPref",
+      "severity": "Warning",
+      "message": "Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background",
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "line": "86"
+    },
+    {
+      "id": "ApplySharedPref",
+      "severity": "Warning",
+      "message": "Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background",
+      "path": "app/src/main/java/com/phonoteka/security/LocalAuthManager.kt",
+      "line": "117"
+    },
+    {
+      "id": "DefaultLocale",
+      "severity": "Warning",
+      "message": "Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/TrackDetailScreen.kt",
+      "line": "511"
+    },
+    {
+      "id": "DefaultLocale",
+      "severity": "Warning",
+      "message": "Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/TrackDetailScreen.kt",
+      "line": "512"
+    },
+    {
+      "id": "RedundantLabel",
+      "severity": "Warning",
+      "message": "Redundant label can be removed",
+      "path": "app/src/main/AndroidManifest.xml",
+      "line": "31"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.activity:activity-compose than 1.9.2 is available: 1.13.0",
+      "path": "app/build.gradle.kts",
+      "line": "93"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.8.6 is available: 2.11.0",
+      "path": "app/build.gradle.kts",
+      "line": "95"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.6 is available: 2.11.0",
+      "path": "app/build.gradle.kts",
+      "line": "96"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.8.6 is available: 2.11.0",
+      "path": "app/build.gradle.kts",
+      "line": "97"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.navigation:navigation-compose than 2.8.0 is available: 2.10.2",
+      "path": "app/build.gradle.kts",
+      "line": "100"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.5",
+      "path": "app/build.gradle.kts",
+      "line": "103"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.5",
+      "path": "app/build.gradle.kts",
+      "line": "104"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.5",
+      "path": "app/build.gradle.kts",
+      "line": "105"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.camera:camera-core than 1.3.4 is available: 1.6.2",
+      "path": "app/build.gradle.kts",
+      "line": "111"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.camera:camera-camera2 than 1.3.4 is available: 1.6.2",
+      "path": "app/build.gradle.kts",
+      "line": "112"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.camera:camera-lifecycle than 1.3.4 is available: 1.6.2",
+      "path": "app/build.gradle.kts",
+      "line": "113"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.camera:camera-view than 1.3.4 is available: 1.6.2",
+      "path": "app/build.gradle.kts",
+      "line": "114"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.media3:media3-exoplayer than 1.4.1 is available: 1.11.1",
+      "path": "app/build.gradle.kts",
+      "line": "118"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.media3:media3-ui than 1.4.1 is available: 1.11.1",
+      "path": "app/build.gradle.kts",
+      "line": "119"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.media3:media3-session than 1.4.1 is available: 1.11.1",
+      "path": "app/build.gradle.kts",
+      "line": "120"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.datastore:datastore-preferences than 1.1.1 is available: 1.2.1",
+      "path": "app/build.gradle.kts",
+      "line": "123"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.room:room-testing than 2.6.1 is available: 2.8.5",
+      "path": "app/build.gradle.kts",
+      "line": "147"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.test.ext:junit than 1.2.1 is available: 1.3.0",
+      "path": "app/build.gradle.kts",
+      "line": "153"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.test:runner than 1.6.2 is available: 1.7.0",
+      "path": "app/build.gradle.kts",
+      "line": "154"
+    },
+    {
+      "id": "GradleDependency",
+      "severity": "Warning",
+      "message": "A newer version of androidx.test.espresso:espresso-core than 3.6.1 is available: 3.7.0",
+      "path": "app/build.gradle.kts",
+      "line": "157"
+    },
+    {
+      "id": "ModifierParameter",
+      "severity": "Warning",
+      "message": "Modifier parameter should be the first optional parameter",
+      "path": "app/src/main/java/com/phonoteka/ui/components/FormField.kt",
+      "line": "24"
+    },
+    {
+      "id": "ModifierParameter",
+      "severity": "Warning",
+      "message": "Modifier parameter should be the first optional parameter",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/HomeScreen.kt",
+      "line": "63"
+    },
+    {
+      "id": "ModifierParameter",
+      "severity": "Warning",
+      "message": "Modifier parameter should be the first optional parameter",
+      "path": "app/src/main/java/com/phonoteka/ui/components/MiniPlayer.kt",
+      "line": "50"
+    },
+    {
+      "id": "StaticFieldLeak",
+      "severity": "Warning",
+      "message": "This field leaks a context object",
+      "path": "app/src/main/java/com/phonoteka/viewmodel/PlayerViewModel.kt",
+      "line": "73"
+    },
+    {
+      "id": "KaptUsageInsteadOfKsp",
+      "severity": "Warning",
+      "message": "This library supports using KSP instead of kapt, which greatly improves performance. Learn more: https://developer.android.com/studio/build/migrate-to-ksp",
+      "path": "app/build.gradle.kts",
+      "line": "105"
+    },
+    {
+      "id": "AutoboxingStateCreation",
+      "severity": "Information",
+      "message": "Prefer `mutableLongStateOf` instead of `mutableStateOf`",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/AuthGateScreen.kt",
+      "line": "40"
+    },
+    {
+      "id": "AutoboxingStateCreation",
+      "severity": "Information",
+      "message": "Prefer `mutableLongStateOf` instead of `mutableStateOf`",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/AuthGateScreen.kt",
+      "line": "41"
+    },
+    {
+      "id": "AutoboxingStateCreation",
+      "severity": "Information",
+      "message": "Prefer `mutableLongStateOf` instead of `mutableStateOf`",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/Lab13MockAuthScreen.kt",
+      "line": "39"
+    },
+    {
+      "id": "AutoboxingStateCreation",
+      "severity": "Information",
+      "message": "Prefer `mutableLongStateOf` instead of `mutableStateOf`",
+      "path": "app/src/main/java/com/phonoteka/ui/screens/Lab13MockAuthScreen.kt",
+      "line": "40"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.purple_primary` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "3"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.purple_dark` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "4"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.purple_pale` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "5"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.green_ok` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "6"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.amber_warn` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "7"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.red_err` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "8"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.bg_light` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "9"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.ink_dark` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "10"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.bg_dark` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "11"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.color.ink_light` appears to be unused",
+      "path": "app/src/main/res/values/colors.xml",
+      "line": "12"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.welcome` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "3"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.go_to_list` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "4"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.settings` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "5"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.dark_theme` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "6"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.download_source` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "7"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.download` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "8"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.retry` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "9"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.refresh` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "10"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.load_more` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "11"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.no_data` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "12"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.not_found` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "13"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.back` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "14"
+    },
+    {
+      "id": "UnusedResources",
+      "severity": "Warning",
+      "message": "The resource `R.string.search_hint` appears to be unused",
+      "path": "app/src/main/res/values/strings.xml",
+      "line": "15"
+    },
+    {
+      "id": "MonochromeLauncherIcon",
+      "severity": "Warning",
+      "message": "The application adaptive icon is missing a monochrome tag",
+      "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "line": "2"
+    },
+    {
+      "id": "MonochromeLauncherIcon",
+      "severity": "Warning",
+      "message": "The application adaptive roundIcon is missing a monochrome tag",
+      "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "line": "2"
+    }
+  ]
+}

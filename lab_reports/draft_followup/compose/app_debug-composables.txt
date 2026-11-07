@@ -1,0 +1,284 @@
+restartable skippable fun RecordRecomposition(
+  stable name: String
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun Lab15LiveScreen(
+  stable onBack: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun Lab9MeasurementsScreen(
+  stable onBack: Function0<Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun Navigation(
+  unstable repository: PhonotekaRepository
+  unstable settingsViewModel: SettingsViewModel
+  unstable playerViewModel: PlayerViewModel
+  unstable authManager: LocalAuthManager
+  stable onLock: Function0<Unit>? = @static {
+
+}
+
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun MiniPlayerHost(
+  unstable playerViewModel: PlayerViewModel
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun PreviewWrapper(
+  stable dark: Boolean = @static false
+  stable content: Function2<Composer, Int, Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun HomeScreenPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun HomeScreenDarkPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun HomeScreenEmptyPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackCardDonePreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackCardPendingPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun StatusBadgeAllPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun MiniPlayerPlayingPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun MiniPlayerPausedPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun MiniPlayerErrorPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailWithFilePreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailWithoutFilePreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailReadyPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailDownloadingPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailAttachingErrorPreview()
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun AppButton(
+  stable modifier: Modifier? = @static Companion
+  stable text: String
+  stable onClick: Function0<Unit>
+  stable style: AppButtonStyle? = @static AppButtonStyle.PRIMARY
+  stable size: AppButtonSize? = @static AppButtonSize.MEDIUM
+  stable enabled: Boolean = @static true
+  stable isLoading: Boolean = @static false
+  stable leadingContent: @[ExtensionFunctionType] Function3<RowScope, Composer, Int, Unit>? = @static null
+  stable containerColor: Color? = @static null
+  stable contentColor: Color? = @static null
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun ButtonContent(
+  unused stable <this>: RowScope
+  stable text: String
+  stable fontSize: TextUnit
+  stable isLoading: Boolean
+  stable leadingContent: @[ExtensionFunctionType] Function3<RowScope, Composer, Int, Unit>?
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun FormField(
+  stable value: String
+  stable onValueChange: Function1<String, Unit>
+  stable label: String
+  stable state: FormFieldState? = @static FormFieldState.IDLE
+  stable modifier: Modifier? = @static Companion
+  stable contentDescription: String? = @static null
+  stable message: String? = @static null
+  stable singleLine: Boolean = @static true
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun MiniPlayer(
+  stable state: PlayerUiState
+  stable onPlayPause: Function0<Unit>
+  stable onSeek: Function1<Long, Unit>
+  stable onNext: Function0<Unit>
+  stable onDismissError: Function0<Unit>
+  stable onRetry: Function0<Unit>? = @static {
+
+}
+
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun OwnedQrScanner(
+  stable modifier: Modifier? = @static Companion
+  stable onCode: Function1<String, Unit>
+  stable onError: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable]]") fun ProfileCard(
+  stable modifier: Modifier? = @static Companion
+  stable leadingIcon: Function2<Composer, Int, Unit>
+  stable title: String
+  stable subtitle: String
+  stable trailingContent: @[ExtensionFunctionType] Function3<RowScope, Composer, Int, Unit>? = @static ComposableSingletons$ProfileCardKt.lambda-1
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun RiskStepUpPrompt(
+  unstable app: PhonotekaApp
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun SearchBar(
+  stable query: String
+  stable onValueChange: Function1<String, Unit>
+  stable modifier: Modifier? = @static Companion
+  stable placeholder: String? = @static "Исполнитель, песня…"
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun StatusBadge(
+  stable status: TrackStatus
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun StatusButton(
+  stable text: String
+  stable state: ButtonState
+  stable onClick: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun TrackCard(
+  stable track: Track
+  stable index: Int
+  stable onClick: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun DetailRow(
+  stable label: String
+  stable value: String
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun PermissionRequestButton(
+  stable permission: String
+  stable label: String
+  stable explanation: String
+  stable enabled: Boolean = @static true
+  stable onGranted: Function0<Unit>
+  stable onDenied: Function0<Unit>? = @static {
+
+}
+
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun AuthGateScreen(
+  unstable auth: LocalAuthManager
+  unstable repository: MockSessionRepository
+  stable biometricAvailable: Boolean
+  stable onBiometric: Function0<Unit>
+  stable onUnlock: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun PinField(
+  stable label: String
+  stable value: String
+  stable onValue: Function1<String, Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun HomeScreen(
+  stable doneCount: Int
+  stable totalCount: Int
+  stable errorCount: Int
+  stable reviewCount: Int
+  stable onNavigateToList: Function0<Unit>
+  stable onNavigateToSettings: Function0<Unit>
+  stable onNavigateToTheme: Function0<Unit>? = @static {
+
+}
+
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun StatCard(
+  stable label: String
+  stable count: Int
+  stable bgColor: Color
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun Lab10CatalogScreen(
+  unstable viewModel: PostCatalogViewModel
+  stable onBack: Function0<Unit>
+  stable onPostClick: Function1<Int, Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun Lab10PostDetailScreen(
+  stable postId: Int
+  unstable viewModel: PostCatalogViewModel
+  stable onBack: Function0<Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun Lab11BackupScreen(
+  unstable repository: PhonotekaRepository
+  stable onBack: Function0<Unit>
+  stable onNotes: Function0<Unit>? = @static {
+
+}
+
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun Lab13MockAuthScreen(
+  unstable repository: MockSessionRepository
+  stable onBack: Function0<Unit>
+  stable onLogout: Function0<Unit>? = @static {
+
+}
+
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun Lab14AccessScreen(
+  stable onBack: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun SettingsScreen(
+  unused unstable viewModel: SettingsViewModel
+  stable onBack: Function0<Unit>
+  stable onNavigateToSubScreen: Function1<String, Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun GeneralSettingsScreen(
+  unstable viewModel: SettingsViewModel
+  stable onBack: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun NotificationsSettingsScreen(
+  unused unstable viewModel: SettingsViewModel
+  stable onBack: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun ThemeSettingsScreen(
+  unstable viewModel: SettingsViewModel
+  stable onBack: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun SettingsCategoryItem(
+  stable icon: ImageVector
+  stable title: String
+  stable subtitle: String
+  stable onClick: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun SettingRow(
+  stable title: String
+  stable subtitle: String
+  stable trailing: Function2<Composer, Int, Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun SplashScreen(
+  stable onNavigateToHome: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun TrackDetailScreen(
+  unstable viewModel: TrackDetailViewModel
+  stable onBack: Function0<Unit>
+  stable onPlay: Function1<Track, Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun CenteredBox(
+  stable innerPadding: PaddingValues
+  stable content: Function2<Composer, Int, Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun DetailContent(
+  stable track: Track
+  unstable candidates: List<TrackCandidate>
+  stable isAttaching: Boolean
+  stable operation: OperationProgress
+  stable error: String?
+  stable onSearch: Function0<Unit>
+  stable onSearchAndDownload: Function0<Unit>
+  stable onDownload: Function0<Unit>
+  stable onCancelDownload: Function0<Unit>
+  stable onSelectCandidate: Function1<String, Unit>
+  stable onAutoSelect: Function0<Unit>
+  stable onPickAudio: Function0<Unit>
+  stable onPlay: Function0<Unit>
+  stable onDismissError: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun CandidateRow(
+  stable candidate: TrackCandidate
+  stable isSelected: Boolean
+  stable onClick: Function0<Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun TrackInviteScreen(
+  unstable viewModel: TrackInviteViewModel
+  stable onBack: Function0<Unit>
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun TrackListScreen(
+  unstable viewModel: TrackListViewModel
+  stable onTrackClick: Function1<Long, Unit>
+  stable onNavigateToSettings: Function0<Unit>
+  stable modifier: Modifier? = @static Companion
+  unstable awaitDraftDebounce: SuspendFunction0<Unit>? = @static {
+  delay  (  400L  )
+}
+
+)
+restartable scheme("[androidx.compose.ui.UiComposable]") fun TrackNotesScreen(
+  unstable viewModel: TrackNotesViewModel
+  stable onBack: Function0<Unit>
+)
+restartable skippable scheme("[0, [0]]") fun PhonotekaTheme(
+  stable themeMode: ThemeMode? = @static ThemeMode.SYSTEM
+  stable forceDarkContent: Boolean = @static false
+  stable content: Function2<Composer, Int, Unit>
+)

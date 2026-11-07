@@ -1,0 +1,17 @@
+rules:
+  - id: android-sensitive-log
+    languages: [kotlin]
+    severity: ERROR
+    message: Do not log token/password/PIN/recovery material; inspect without displaying values.
+    patterns:
+      - pattern-either:
+          - pattern: android.util.Log.$METHOD(..., $VALUE, ...)
+          - pattern: Log.$METHOD(..., $VALUE, ...)
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: '(?i).*(accessToken|refreshToken|password|recoveryCode|pin_mac).*'
+  - id: tls-trust-all-hostname
+    languages: [kotlin]
+    severity: ERROR
+    message: A trust-all hostname verifier is forbidden, including local TLS demos.
+    pattern: $CLIENT.hostnameVerifier { $A, $B -> true }

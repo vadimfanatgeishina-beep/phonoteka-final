@@ -1,0 +1,4 @@
+TLSv1.2: owned client/server handshake accepted
+TLSv1.3: owned client/server handshake accepted
+TLSv1.0: SERVER fatal protocol_version alert observed on owned loopback
+TLSv1.1: SERVER fatal protocol_version alert observed on owned loopback

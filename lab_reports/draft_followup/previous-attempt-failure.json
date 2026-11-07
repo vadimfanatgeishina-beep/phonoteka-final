@@ -1,0 +1,8 @@
+{
+  "scope": "Actual pre-fix full run, not final result",
+  "tests": 134,
+  "failed": 1,
+  "failure_class": "com.phonoteka.security.LocalWssMockServerTest",
+  "failure": "IOException: Gave up waiting for queue to shut down",
+  "change": "close acknowledgements at both peers + wait both onClosed; failure not swallowed"
+}

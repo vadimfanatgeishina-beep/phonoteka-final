@@ -1,0 +1,14 @@
+HISTORICAL v3 snapshot only; NOT a result of the expanded patch.
+See AUDIT_REPORT.md and RUN_MATRIX.md for source/verification separation.
+
+ЛР16 — статические доказательства baseline commit eadf4b0 (08.10.2026)
+Команды: git show eadf4b0:<path> + точечный поиск соответствующего признака. Значения секретов не сохраняются.
+F-01 backup: android:allowBackup="true"
+F-02 local auth: baseline security/auth source files: 0
+F-03 downloader limits: occurrences of max-byte/playlist/segment cap in baseline downloader: 0
+F-04 destructive migration: .fallbackToDestructiveMigration() ; .fallbackToDestructiveMigration()
+F-05 source URL diagnostics: baseline OkHttpDownloader throws IOException("Network request failed: ${request.url()}") and passes latestUrl into ReCaptchaException; baseline StreamSearcher logs candidate.url and e.message.
+F-06 release minification: isMinifyEnabled = false
+Current checks: :app:lintDebug successful (51 warnings, 0 errors); :app:dependencies --configuration releaseRuntimeClasspath successful; :app:testDebugUnitTest successful (57 tests, 0 failures); :app:assembleRelease successful (unsigned APK).
+Dynamic evidence (adb/logcat/backup/MITM) not collected: `:app:connectedDebugAndroidTest` failed with `DeviceException: No connected devices!`, and `adb devices -l` returned an empty list.
+gitleaks executable is not installed (Get-Command gitleaks returned no path); do not interpret as clean secret scan.

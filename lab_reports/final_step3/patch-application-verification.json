@@ -1,0 +1,120 @@
+{
+  "baseline": "Phonoteka-final-step2-source.zip (safe synthetic imported snapshot)",
+  "git_apply_check": "PASS",
+  "git_apply": "PASS",
+  "changed_file_content_comparison": "PASS",
+  "files": [
+    {
+      "path": "AUDIT_REPORT.md",
+      "sha256": "e6ab98ab733774dd3b82eaad504a5c66808e095cd3c394d3e4bb1a6d214095d9"
+    },
+    {
+      "path": "FINAL_STEP3.md",
+      "sha256": "6e4812886be318ab5b7c8476c707f23363407de2190d401fb8c0d465b3918886"
+    },
+    {
+      "path": "LAB_REQUIREMENTS.md",
+      "sha256": "521dd68b3ee4d1bdd58dfeaea5a73633e78cc0f4ee92ea569a7a22b7cd1e7914"
+    },
+    {
+      "path": "README.md",
+      "sha256": "9687c1f943f41a91b8766a358b303887ce154855630f7ccc08d8f582d90a3612"
+    },
+    {
+      "path": "app/src/androidTest/java/com/phonoteka/security/AccessBoundaryTest.kt",
+      "sha256": "0a8f5dc69f9671139c582315298235d052915cda94de8d6461df0d5fe9e9866b"
+    },
+    {
+      "path": "app/src/androidTest/java/com/phonoteka/security/AndroidAuditJournalTest.kt",
+      "sha256": "595af062e22104e047f9dd7c47c5b4d6b20b92083e8ba4d78d2169b9de22cf14"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/PhonotekaApp.kt",
+      "sha256": "820cb4f1d690ef3f1dc9e7620b233637d7d1557ed2b32f67038c6f8011899066"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/data/TrackInvites.kt",
+      "sha256": "4406a9648d67b6730400896642b3c671be8d3ab9a37ec639c9a7fd9a9e9fb85c"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/AndroidAuditJournal.kt",
+      "sha256": "fd2d98641b94c6cc93665f5235da881eddcc8b868bc6dacae15f8f557b772b8d"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/AndroidKeystoreAuditExport.kt",
+      "sha256": "d90b1a6fed1890d4cd6372e533d158fa09038493750403854e98be7a9bd55120"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/AuditAccessGate.kt",
+      "sha256": "9d6e21cc4e9d679208dc2941ec460ea12869f9718bf22a94b98d13488aa5cf7e"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/DemoRoles.kt",
+      "sha256": "41ba1b28014736240bc0a37545ee9e30e9f7588df4d37f8b5de41539cf3756c5"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/MockRoleAuthority.kt",
+      "sha256": "f36fc2b786cb9c6f1f56d6c80cc2512e3d11a6f15908296fe061a54783fd6c5f"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/security/SignedAuditJournal.kt",
+      "sha256": "9ba842264d72c12568f6c37c98815d54f4364056d5b5a7b173c9a7ff15564423"
+    },
+    {
+      "path": "app/src/main/java/com/phonoteka/ui/screens/Lab14AccessScreen.kt",
+      "sha256": "f0f279a3e99e0726d88e16614825e969b27b76dbe8e6fc3862fac552f7ef9981"
+    },
+    {
+      "path": "app/src/test/java/com/phonoteka/security/AuditAccessGateTest.kt",
+      "sha256": "ef61d256a391b3894a792e1b88bc13a8fa75ee175edaad09e4718edeebd4a57c"
+    },
+    {
+      "path": "app/src/test/java/com/phonoteka/security/SignedAuditJournalTest.kt",
+      "sha256": "49b38cb6a6629697d964333a68cde77d5e3008ee5d76e6ea701ec2131641a59d"
+    },
+    {
+      "path": "lab_reports/final_step3/RESULTS.md",
+      "sha256": "07c4398f619cb2a000d145af4655a743667514643a4ef155d01afce3357bb051"
+    },
+    {
+      "path": "lab_reports/final_step3/apk-signature-check.txt",
+      "sha256": "0184b62635bae35647d1a4d64e2022ceedd5c388698bc6aa12be5fcd4ad14eeb"
+    },
+    {
+      "path": "lab_reports/final_step3/artifact-hashes.json",
+      "sha256": "0476b132c73e3ccf6c14ee13eed0dd2baa1ccebf970df24bcbadaa98ef976f2a"
+    },
+    {
+      "path": "lab_reports/final_step3/final-build.txt",
+      "sha256": "ed737b8baf981075e4afc11d70ef03ccdfed7f505937b1a9b383c0094671b5ee"
+    },
+    {
+      "path": "lab_reports/final_step3/focused-audit-tests.txt",
+      "sha256": "fd1fa30773104d9f7e687800229a095f405c74d4b1110bed14bfb39d278b9560"
+    },
+    {
+      "path": "lab_reports/final_step3/initial-compile-FAILED.txt",
+      "sha256": "df573f70b039dd9e2fa131022c8df3943e3ff66e0ab15f5674c7c191b6a78151"
+    },
+    {
+      "path": "lab_reports/final_step3/jvm-results.json",
+      "sha256": "e04692bfb41c8bed25c406d50ff49113c28c33c8b0fb08805f2aa2117eabcf57"
+    },
+    {
+      "path": "lab_reports/final_step3/lint-results-debug.xml",
+      "sha256": "b8c7caadcafed7efa4c8cc6a5adfa88a140ea35e1556a507830fd0ad3179a7f0"
+    },
+    {
+      "path": "lab_reports/final_step3/lint-summary.json",
+      "sha256": "fae8cc15a19baf563189772072cc9463882eb8d10808376558c7fe3ba177df2f"
+    },
+    {
+      "path": "lab_reports/final_step3/second-compile-FAILED.txt",
+      "sha256": "b45d8e11ac9ee9f02ed09e2155b5edc3acbfc3637b06ce04aaaf1a71e7ba96d1"
+    },
+    {
+      "path": "lab_reports/final_step3/verified-source-hashes.json",
+      "sha256": "141cc517c8193e35f91ea6bd1c26d2e1ef548f111adefb39d6a20721d7f62c46"
+    }
+  ]
+}

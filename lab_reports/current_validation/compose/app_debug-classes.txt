@@ -1,0 +1,859 @@
+unstable class RecompositionProbe {
+  unstable val allowed: Set<String>
+  stable var enabled: Boolean
+  stable var started: Long
+  unstable val counts: MutableMap<String, Long>
+  <runtime stability> = Unstable
+}
+stable class LocalMockTlsClient {
+  stable val PRIMARY_PIN: String
+  stable val BACKUP_PIN: String
+  <runtime stability> = Stable
+}
+stable class InviteActivity {
+  <runtime stability> = Stable
+}
+unstable class MainActivity {
+  unstable var authManager: LocalAuthManager
+  stable var sessionUnlocked$delegate: MutableState<Boolean>
+  stable var backgroundAt: Long
+  <runtime stability> = Unstable
+}
+unstable class PhonotekaApp {
+  unstable val database$delegate: Lazy<PhonotekaDatabase>
+  unstable val localAuth$delegate: Lazy<LocalAuthManager>
+  unstable val riskStepUp$delegate: Lazy<RiskStepUpController>
+  stable var elevatedAfterBackground: Boolean
+  unstable val roleSession$delegate: Lazy<DemoRoleSession>
+  unstable val accessAudit$delegate: Lazy<AccessAuditRepository>
+  unstable val repository$delegate: Lazy<PhonotekaRepository>
+  unstable val lab13MockSession$delegate: Lazy<MockSessionRepository>
+  unstable val inviteAuthority$delegate: Lazy<MockInviteAuthority>
+  unstable val trackInvites$delegate: Lazy<AuthorizedTrackInvites>
+  unstable val trackNotes$delegate: Lazy<AuthorizedTrackNotes>
+  unstable val catalogRepository$delegate: Lazy<RoomPostCatalogRepository>
+  <runtime stability> = Unstable
+}
+stable class CandidateEntity {
+  stable val id: String
+  stable val trackId: Long
+  stable val artist: String
+  stable val title: String
+  stable val source: String
+  stable val durationSec: Int
+  stable val score: Int
+  stable val isExplicit: Boolean
+  stable val url: String
+  stable val channelName: String
+  stable val blocked: Boolean
+  stable val version: String
+  stable val thumbnailUrl: String?
+  stable val audioStreamUrl: String?
+  <runtime stability> = Stable
+}
+stable class CatalogPost {
+  stable val userId: Int
+  stable val id: Int
+  stable val title: String
+  stable val body: String
+  <runtime stability> = Stable
+}
+stable class CatalogComment {
+  stable val postId: Int
+  stable val id: Int
+  stable val name: String
+  stable val email: String
+  stable val body: String
+  <runtime stability> = Stable
+}
+stable class CatalogPostEntity {
+  stable val id: Int
+  stable val userId: Int
+  stable val title: String
+  stable val body: String
+  stable val fetchedAt: Long
+  <runtime stability> = Stable
+}
+stable class CatalogCommentEntity {
+  stable val postId: Int
+  stable val id: Int
+  stable val name: String
+  stable val email: String
+  stable val body: String
+  <runtime stability> = Stable
+}
+unstable class BackupDocument {
+  stable val schemaVersion: Int
+  unstable val tracks: List<TrackEntity>
+  unstable val candidates: List<CandidateEntity>
+  <runtime stability> = Unstable
+}
+unstable class LibraryBackupCodec {
+  unstable val gson: Gson
+  <runtime stability> = Unstable
+}
+unstable class LibraryBackupFileStore {
+  stable val beforeCommit: Function0<Unit>
+  unstable val file: File
+  stable val keyAlias: String
+  unstable val atomic: AtomicFile
+  <runtime stability> = Unstable
+}
+unstable class Index {
+  unstable val byName: Map<Pair<String, String>, List<Track>>
+  <runtime stability> = Unstable
+}
+stable class LocalAudioMatcher {
+  <runtime stability> = Stable
+}
+unstable class CandidateAnalysis {
+  stable val score: Int
+  stable val artistSimilarity: Double
+  stable val titleSimilarity: Double
+  unstable val forbiddenWords: List<String>
+  stable val autoOk: Boolean
+  stable val needsReview: Boolean
+  <runtime stability> = Unstable
+}
+unstable class Matching {
+  unstable val FORBIDDEN_EDITIONS: Set<String>
+  unstable val ALLOW_IN_TITLE: Set<String>
+  stable val MIN_AUTO_SCORE: Int
+  stable val MIN_ARTIST_SIMILARITY: Double
+  stable val MIN_TITLE_SIMILARITY: Double
+  <runtime stability> = Unstable
+}
+stable class PhonotekaDatabase {
+  <runtime stability> = Stable
+}
+unstable class PhonotekaRepository {
+  runtime val dao: TrackDao
+  unstable val context: Context
+  stable val gate: Function2<DemoScope, String, Unit>
+  unstable val importMutex: Mutex
+  stable val searcher: StreamSearcher
+  unstable val downloader: AudioDownloader
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  stable val KEY_ASSETS_IMPORTED: String
+  unstable val backupFileStore: LibraryBackupFileStore
+  <runtime stability> = Unstable
+}
+stable class Network {
+  <runtime stability> = Stable
+}
+stable class Http {
+  stable val code: Int
+  <runtime stability> = Stable
+}
+stable class Parsing {
+  <runtime stability> = Stable
+}
+stable class Unknown {
+  <runtime stability> = Stable
+}
+unstable class RoomPostCatalogRepository {
+  runtime val api: PostCatalogApi
+  runtime val dao: CatalogPostDao
+  unstable val pageMutex: Mutex
+  stable var nextOffset: Int
+  stable var endReached: Boolean
+  <runtime stability> = Unstable
+}
+stable class Track {
+  stable val id: Long
+  stable val artist: String
+  stable val title: String
+  stable val status: TrackStatus
+  stable val filePath: String?
+  stable val source: String?
+  stable val lastError: String?
+  stable val sha256: String?
+  stable val searchQuery: String
+  stable val durationSec: Int?
+  stable val candidateArtist: String?
+  stable val candidateTitle: String?
+  stable val selectedCandidateId: String?
+  stable val manual: Boolean
+  stable val audioValidationJson: String?
+  <runtime stability> = Stable
+}
+stable class TrackCandidate {
+  stable val videoId: String
+  stable val artist: String
+  stable val title: String
+  stable val source: String
+  stable val durationSec: Int
+  stable val score: Int
+  stable val isExplicit: Boolean
+  stable val url: String
+  stable val channelName: String
+  <runtime stability> = Stable
+}
+stable class TrackEntity {
+  stable val id: Long
+  stable val artist: String
+  stable val title: String
+  stable val status: String
+  stable val filePath: String?
+  stable val source: String?
+  stable val lastError: String?
+  stable val sha256: String?
+  stable val searchQuery: String
+  stable val durationSec: Int?
+  stable val candidateArtist: String?
+  stable val candidateTitle: String?
+  stable val selectedCandidateId: String?
+  stable val manual: Boolean
+  stable val audioValidationJson: String?
+  stable val orderIndex: Int
+  <runtime stability> = Stable
+}
+unstable class AuthorizedTrackInvites {
+  runtime val dao: TrackDao
+  unstable val endpoint: MockInviteAuthority
+  stable val session: Function0<DemoSession>
+  stable val gate: Function2<DemoScope, String, Unit>
+  stable val audit: Function2<String, Boolean, Unit>
+  <runtime stability> = Unstable
+}
+stable class LocalImportReport {
+  stable val linked: Int
+  stable val skipped: Int
+  stable val failed: Int
+  <runtime stability> = Stable
+}
+unstable class AndroidAtomicNoteIndex {
+  unstable val atomic: AtomicFile
+  <runtime stability> = Unstable
+}
+stable class KeystoreNoteCrypto {
+  stable val hasExistingData: Function0<Boolean>
+  stable val namespace: String
+  <runtime stability> = Stable
+}
+runtime class AuthorizedTrackNotes {
+  runtime val delegate: TrackNotes
+  stable val check: Function2<DemoScope, String, Unit>
+  <runtime stability> = Uncertain(TrackNotes)
+}
+stable class TrackNote {
+  stable val id: Long
+  stable val title: String
+  stable val text: String
+  stable val pinned: Boolean
+  <runtime stability> = Stable
+}
+stable class NoteRead {
+  stable val note: TrackNote
+  stable val recovered: Boolean
+  <runtime stability> = Stable
+}
+stable class Io {
+  <runtime stability> = Stable
+}
+stable class Corrupted {
+  <runtime stability> = Stable
+}
+stable class KeyUnavailable {
+  <runtime stability> = Stable
+}
+stable class TooLarge {
+  <runtime stability> = Stable
+}
+stable class UnsupportedVersion {
+  <runtime stability> = Stable
+}
+stable class InvalidInput {
+  <runtime stability> = Stable
+}
+runtime class NoteException {
+  runtime val reason: NoteError
+  <runtime stability> = Uncertain(NoteError)
+}
+unstable class FileTrackNotesRepository {
+  unstable val root: File
+  unstable val cache: File
+  runtime val crypto: NoteCrypto
+  runtime val index: AtomicNoteIndex
+  unstable val exists: SuspendFunction1<Long, Boolean>
+  stable val now: Function0<Long>
+  unstable val gson: Gson
+  unstable val mutex: Mutex
+  <runtime stability> = Unstable
+}
+unstable class Result {
+  unstable val file: File
+  stable val bytes: Long
+  stable val contentType: String?
+  <runtime stability> = Unstable
+}
+unstable class AudioDownloader {
+  stable val byteLimit: Long
+  stable val playlistLimit: Int
+  stable val segmentLimit: Int
+  unstable val client: OkHttpClient
+  <runtime stability> = Unstable
+}
+stable class Id3Tagger {
+  stable val ID3_HEADER: String
+  stable val VERSION_MAJOR: Byte
+  stable val VERSION_MINOR: Byte
+  <runtime stability> = Stable
+}
+unstable class Matching {
+  unstable val EDITION_PATTERNS: Map<String, Regex>
+  unstable val NEUTRAL_PATTERNS: Map<String, Regex>
+  unstable val FORBIDDEN_EDITIONS: Set<String>
+  unstable val NEUTRAL_EDITIONS: Set<String>
+  unstable val EXPLICIT: Regex
+  unstable val EXPLICIT_NEG: Regex
+  unstable val CLEAN: Regex
+  unstable val PROMO: Regex
+  unstable val PLAYLIST: Regex
+  unstable val BRACKET: Regex
+  unstable val TRAILING_DASH: Regex
+  unstable val MASHUP_JOIN: Regex
+  unstable val FEATURE_MARK: Set<String>
+  unstable val CREDIT_FILLER: Set<String>
+  unstable val NEUTRAL_WORDS: Set<String>
+  unstable val STRONG_TRAILING: Set<String>
+  unstable val AMBIGUOUS_SOLE: Set<String>
+  <runtime stability> = Unstable
+}
+unstable class CandidateScore {
+  stable val score: Int
+  stable val blocked: Boolean
+  stable val autoOk: Boolean
+  stable val version: String
+  unstable val reasons: List<String>
+  stable val titleScore: Double
+  stable val artistScore: Double
+  <runtime stability> = Unstable
+}
+stable class TrackCandidateData {
+  stable val title: String
+  stable val uploader: String
+  stable val artist: String?
+  stable val durationSec: Long?
+  stable val url: String
+  <runtime stability> = Stable
+}
+unstable class OkHttpDownloader {
+  unstable val client: OkHttpClient
+  <runtime stability> = Unstable
+}
+stable class CatalogPostDto {
+  stable val userId: Int
+  stable val id: Int
+  stable val title: String
+  stable val body: String
+  <runtime stability> = Stable
+}
+stable class CatalogCommentDto {
+  stable val postId: Int
+  stable val id: Int
+  stable val name: String
+  stable val email: String
+  stable val body: String
+  <runtime stability> = Stable
+}
+stable class StreamSearcher {
+  <runtime stability> = Stable
+}
+unstable class PlaybackService {
+  unstable var mediaSession: MediaSession?
+  <runtime stability> = Unstable
+}
+stable class AndroidInviteMac {
+  <runtime stability> = Stable
+}
+stable class AndroidKeystoreAuditExport {
+  <runtime stability> = Stable
+}
+unstable class DemoRoleSession {
+  unstable val authority: MockRoleAuthority
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  stable var selected: DemoRole
+  unstable var issued: DemoSession
+  unstable val mutableRole: MutableStateFlow<DemoRole>
+  unstable val changes: StateFlow<DemoRole>
+  <runtime stability> = Unstable
+}
+unstable class DemoAccessService {
+  unstable val audit: AccessAuditRepository
+  unstable val authority: MockRoleAuthority
+  <runtime stability> = Unstable
+}
+unstable class AccessAuditRepository {
+  unstable val authority: MockRoleAuthority
+  stable val readGate: Function0<Unit>
+  stable val exportGate: Function0<Unit>
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  stable val signer: AndroidKeystoreAuditExport
+  <runtime stability> = Unstable
+}
+unstable class LocalAuthManager {
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  stable val keyAlias: String
+  stable val biometricKeyAlias: String
+  stable var lastAuthenticationElapsed: Long?
+  stable var authenticationVersion: Long
+  stable val auditSigner: AndroidKeystoreAuditExport
+  stable val alphabet: String
+  <runtime stability> = Unstable
+}
+stable class LiveSocketMetrics {
+  stable val connected: Boolean
+  stable val attempts: Int
+  stable val reconnects: Int
+  stable val sent: Int
+  stable val received: Int
+  stable val rejected: Int
+  stable val terminalError: String?
+  <runtime stability> = Stable
+}
+unstable class LocalLiveSocket {
+  unstable val client: OkHttpClient
+  unstable val signer: HmacTextFrameSigner
+  unstable val scope: CoroutineScope
+  stable val backoffMillis: Long
+  stable val maxReconnects: Int
+  unstable val mutable: MutableStateFlow<LiveSocketMetrics>
+  unstable val metrics: StateFlow<LiveSocketMetrics>
+  unstable var job: Job?
+  unstable var socket: WebSocket?
+  stable var activeChannel: String?
+  <runtime stability> = Unstable
+}
+stable class MockTokenPair {
+  stable val accessToken: String
+  stable val accessExpiresAtMillis: Long
+  stable val refreshToken: String
+  stable val refreshExpiresAtMillis: Long
+  <runtime stability> = Stable
+}
+stable class Success {
+  stable val tokens: MockTokenPair
+  <runtime stability> = Stable
+}
+stable class InvalidCredentials {
+  <runtime stability> = Stable
+}
+stable class Locked {
+  stable val retryAfterMillis: Long
+  <runtime stability> = Stable
+}
+unstable class PreferencesMockAuthStateStore {
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  <runtime stability> = Unstable
+}
+runtime class LocalMockAuthEndpoint {
+  runtime val state: MockAuthStateStore
+  stable val nowMillis: Function0<Long>
+  stable val accessTtlMillis: Long
+  stable val refreshTtlMillis: Long
+  stable val lockoutMillis: Long
+  <runtime stability> = Uncertain(MockAuthStateStore)
+}
+unstable class AndroidKeystoreRefreshTokenStore {
+  stable val requireSystemAuthentication: Boolean
+  stable val fixtureNamespace: String?
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  unstable val keyguard: KeyguardManager
+  <runtime stability> = Unstable
+}
+stable class MockSessionPersistenceException {
+  <runtime stability> = Stable
+}
+unstable class MockSessionRepository {
+  runtime val endpoint: MockAuthEndpoint
+  runtime val refreshStore: RefreshTokenStore
+  stable val nowMillis: Function0<Long>
+  stable var current: MockTokenPair?
+  <runtime stability> = Unstable
+}
+stable class ScannedTrackInvite {
+  stable val trackId: Long
+  <runtime stability> = Stable
+}
+stable class InviteException {
+  stable val failure: InviteFailure
+  <runtime stability> = Stable
+}
+unstable class MockInviteAuthority {
+  unstable val authority: MockRoleAuthority
+  runtime val mac: InviteMac
+  stable val now: Function0<Long>
+  stable val ttl: Long
+  stable val capacity: Int
+  unstable val issued: MutableMap<String, Entry>
+  <runtime stability> = Unstable
+}
+unstable class DemoSession {
+  stable val role: DemoRole
+  unstable val scopes: Set<DemoScope>
+  stable val mockToken: String
+  <runtime stability> = Unstable
+}
+stable class DemoRolePolicy {
+  <runtime stability> = Stable
+}
+unstable class MockRoleAuthority {
+  stable val now: Function0<Long>
+  unstable val grants: MutableMap<String, Grant>
+  <runtime stability> = Unstable
+}
+stable class SignedRequest {
+  stable val timestampSeconds: Long
+  stable val nonce: String
+  stable val signatureHex: String
+  <runtime stability> = Stable
+}
+unstable class HmacRequestSigner {
+  unstable val key: SecretKey
+  stable val clock: Function0<Long>
+  <runtime stability> = Unstable
+}
+unstable class ReplayGuard {
+  stable val maxEntries: Int
+  unstable val used: LinkedHashMap<String, Long>
+  <runtime stability> = Unstable
+}
+unstable class HmacSigningInterceptor {
+  unstable val signer: HmacRequestSigner
+  <runtime stability> = Unstable
+}
+stable class AuthenticationSnapshot {
+  stable val version: Long
+  stable val authenticatedAt: Long?
+  <runtime stability> = Stable
+}
+stable class StepUpRisk {
+  stable val debuggerAttached: Boolean
+  stable val resumedAfterLongBackground: Boolean
+  <runtime stability> = Stable
+}
+stable class RiskStepUpPolicy {
+  stable val SESSION_WINDOW: Long
+  stable val APPROVAL_WINDOW: Long
+  stable val CHALLENGE_WINDOW: Long
+  <runtime stability> = Stable
+}
+stable class StepUpChallenge {
+  stable val id: String
+  stable val operation: ProtectedOperation
+  stable val issuedAt: Long
+  stable val baselineVersion: Long
+  <runtime stability> = Stable
+}
+stable class StepUpRequiredException {
+  <runtime stability> = Stable
+}
+unstable class RiskStepUpController {
+  stable val now: Function0<Long>
+  unstable val approvals: MutableMap<ProtectedOperation, Approval>
+  unstable val mutable: MutableStateFlow<StepUpChallenge?>
+  unstable val pending: StateFlow<StepUpChallenge?>
+  <runtime stability> = Unstable
+}
+stable class RuntimeSignals {
+  stable val debuggerAttached: Boolean
+  stable val emulator: Boolean
+  <runtime stability> = Stable
+}
+stable class RuntimeSignalProbe {
+  <runtime stability> = Stable
+}
+stable class SignedTextFrame {
+  stable val channel: String
+  stable val timestampSeconds: Long
+  stable val nonce: String
+  stable val signatureHex: String
+  stable val payloadBase64: String
+  <runtime stability> = Stable
+}
+unstable class HmacTextFrameSigner {
+  unstable val key: SecretKey
+  stable val clockSeconds: Function0<Long>
+  <runtime stability> = Unstable
+}
+unstable class FrameReplayGuard {
+  stable val maxEntries: Int
+  unstable val consumed: LinkedHashMap<String, Long>
+  <runtime stability> = Unstable
+}
+stable class PermissionFlowPolicy {
+  <runtime stability> = Stable
+}
+stable class ExtendedColors {
+  stable val success: Color
+  stable val warning: Color
+  stable val headerStart: Color
+  stable val headerEnd: Color
+  <runtime stability> = Stable
+}
+stable class PlayerUiState {
+  stable val track: Track?
+  stable val isPlaying: Boolean
+  stable val positionMs: Long
+  stable val durationMs: Long
+  stable val hasNext: Boolean
+  stable val isConnected: Boolean
+  stable val error: String?
+  <runtime stability> = Stable
+}
+unstable class PlayerViewModel {
+  unstable val app: @[FlexibleNullability] Context?
+  unstable val _uiState: MutableStateFlow<PlayerUiState>
+  unstable val uiState: StateFlow<PlayerUiState>
+  unstable var controller: MediaController?
+  unstable var controllerFuture: ListenableFuture<MediaController>?
+  unstable var pollingJob: Job?
+  stable var released: Boolean
+  stable val playerListener: <no name provided>
+  <runtime stability> = Unstable
+}
+stable class Loading {
+  <runtime stability> = Stable
+}
+unstable class Success {
+  unstable val posts: List<CatalogPost>
+  stable val query: String
+  stable val offline: Boolean
+  stable val refreshing: Boolean
+  stable val loadingMore: Boolean
+  stable val endReached: Boolean
+  stable val message: String?
+  <runtime stability> = Unstable
+}
+stable class Error {
+  stable val message: String
+  <runtime stability> = Stable
+}
+unstable class CatalogDetailState {
+  stable val post: CatalogPost?
+  unstable val comments: List<CatalogComment>
+  stable val loading: Boolean
+  stable val offline: Boolean
+  stable val message: String?
+  <runtime stability> = Unstable
+}
+runtime class Factory {
+  runtime val repository: PostCatalogRepository
+  <runtime stability> = Uncertain(PostCatalogRepository)
+}
+unstable class PostCatalogViewModel {
+  runtime val repository: PostCatalogRepository
+  unstable val savedStateHandle: SavedStateHandle
+  unstable val mutableState: MutableStateFlow<CatalogUiState>
+  unstable val state: StateFlow<CatalogUiState>
+  unstable val mutableQuery: MutableStateFlow<String>
+  unstable val query: StateFlow<String>
+  unstable val mutableRetry: MutableStateFlow<String?>
+  unstable val retryMessage: StateFlow<String?>
+  unstable var refreshJob: Job?
+  unstable val mutableDetail: MutableStateFlow<CatalogDetailState>
+  unstable val detail: StateFlow<CatalogDetailState>
+  unstable var detailJob: Job?
+  stable var detailId: Int?
+  stable var detailGeneration: Long
+  <runtime stability> = Unstable
+}
+stable class SettingsState {
+  stable val themeMode: ThemeMode
+  stable val forceDarkContent: Boolean
+  stable val showHints: Boolean
+  stable val autoDownload: Boolean
+  stable val showExplicitBadge: Boolean
+  <runtime stability> = Stable
+}
+unstable class SettingsViewModel {
+  unstable val store: DataStore<Preferences>
+  unstable val state: StateFlow<SettingsState>
+  <runtime stability> = Unstable
+}
+stable class Loading {
+  <runtime stability> = Stable
+}
+stable class Success {
+  stable val track: Track
+  <runtime stability> = Stable
+}
+stable class NotFound {
+  <runtime stability> = Stable
+}
+stable class Error {
+  stable val message: String
+  <runtime stability> = Stable
+}
+stable class DetailUiState {
+  <runtime stability> = Stable
+}
+stable class Idle {
+  <runtime stability> = Stable
+}
+stable class Searching {
+  stable val active: Boolean
+  <runtime stability> = Stable
+}
+stable class Downloading {
+  stable val downloadedBytes: Long
+  stable val totalBytes: Long?
+  <runtime stability> = Stable
+}
+stable class Done {
+  <runtime stability> = Stable
+}
+stable class OperationProgress {
+  <runtime stability> = Stable
+}
+unstable class Factory {
+  unstable val repo: PhonotekaRepository
+  stable val trackId: Long
+  <runtime stability> = Unstable
+}
+unstable class TrackDetailViewModel {
+  unstable val repo: PhonotekaRepository
+  stable val trackId: Long
+  unstable val attachBusy: AtomicBoolean
+  unstable val searchBusy: AtomicBoolean
+  unstable val downloadBusy: AtomicBoolean
+  unstable val _isAttaching: MutableStateFlow<Boolean>
+  unstable val isAttaching: StateFlow<Boolean>
+  unstable val _error: MutableStateFlow<String?>
+  unstable val error: StateFlow<String?>
+  unstable val _operation: MutableStateFlow<OperationProgress>
+  unstable val operation: StateFlow<OperationProgress>
+  unstable var downloadJob: Job?
+  unstable val uiState: StateFlow<DetailUiState>
+  unstable val candidates: StateFlow<List<TrackCandidate>>
+  <runtime stability> = Unstable
+}
+stable class InviteUiState {
+  stable val wire: String?
+  stable val scannedTrackId: Long?
+  stable val busy: Boolean
+  stable val message: String?
+  <runtime stability> = Stable
+}
+runtime class Factory {
+  runtime val repository: TrackInvites
+  <runtime stability> = Uncertain(TrackInvites)
+}
+unstable class TrackInviteViewModel {
+  runtime val repository: TrackInvites
+  unstable val mutable: MutableStateFlow<InviteUiState>
+  unstable val state: StateFlow<InviteUiState>
+  stable var generation: Long
+  unstable var operation: Job?
+  <runtime stability> = Unstable
+}
+stable class Loading {
+  <runtime stability> = Stable
+}
+unstable class Success {
+  unstable val tracks: List<Track>
+  stable val isRefreshing: Boolean
+  stable val totalMatches: Int
+  <runtime stability> = Unstable
+}
+stable class Error {
+  stable val message: String
+  stable val errorType: ErrorType
+  stable val retryCount: Int
+  stable val nextRetryDelayMs: Long
+  <runtime stability> = Stable
+}
+stable class Empty {
+  stable val message: String
+  <runtime stability> = Stable
+}
+stable class ListUiState {
+  <runtime stability> = Stable
+}
+stable class LocalImportUiState {
+  stable val busy: Boolean
+  stable val message: String?
+  <runtime stability> = Stable
+}
+stable class AddTrackUiState {
+  stable val busy: Boolean
+  stable val message: String?
+  stable val trackId: Long?
+  <runtime stability> = Stable
+}
+stable class AddTrackDraft {
+  stable val artist: String
+  stable val title: String
+  <runtime stability> = Stable
+}
+stable class BatchOperationState {
+  stable val active: Boolean
+  stable val operation: String
+  stable val current: Int
+  stable val total: Int
+  stable val currentTrackName: String
+  stable val message: String?
+  <runtime stability> = Stable
+}
+stable class ClearResult {
+  stable val success: Boolean
+  stable val message: String
+  <runtime stability> = Stable
+}
+runtime class Factory {
+  runtime val repo: TrackLibrary
+  <runtime stability> = Uncertain(TrackLibrary)
+}
+unstable class TrackListViewModel {
+  runtime val repo: TrackLibrary
+  unstable val savedStateHandle: SavedStateHandle
+  unstable val _searchQuery: MutableStateFlow<String>
+  unstable val searchQuery: StateFlow<String>
+  unstable val _statusFilter: MutableStateFlow<TrackStatus?>
+  unstable val statusFilter: StateFlow<TrackStatus?>
+  unstable val allTracks: MutableStateFlow<List<Track>?>
+  unstable val pageLimit: MutableStateFlow<Int>
+  unstable val requests: MutableStateFlow<LoadRequest>
+  unstable val operation: MutableStateFlow<Operation>
+  stable var requestActive: Boolean
+  stable var retryCount: Int
+  unstable val _localImport: MutableStateFlow<LocalImportUiState>
+  unstable val localImport: StateFlow<LocalImportUiState>
+  unstable val _batchState: MutableStateFlow<BatchOperationState>
+  unstable val batchState: StateFlow<BatchOperationState>
+  unstable var batchJob: Job?
+  unstable val uiState: StateFlow<ListUiState>
+  unstable val totalCount: Flow<Int>
+  unstable val doneCount: Flow<Int>
+  unstable val errorCount: Flow<Int>
+  unstable val reviewCount: Flow<Int>
+  unstable val addTrackDraft: StateFlow<AddTrackDraft>
+  unstable val _addTrackState: MutableStateFlow<AddTrackUiState>
+  unstable val addTrackState: StateFlow<AddTrackUiState>
+  unstable val _clearState: MutableStateFlow<ClearResult?>
+  unstable val clearState: StateFlow<ClearResult?>
+  <runtime stability> = Unstable
+}
+unstable class NotesUiState {
+  unstable val notes: List<NoteRead>
+  stable val busy: Boolean
+  stable val message: String?
+  <runtime stability> = Unstable
+}
+runtime class Factory {
+  runtime val repo: TrackNotes
+  <runtime stability> = Uncertain(TrackNotes)
+}
+unstable class TrackNotesViewModel {
+  runtime val repository: TrackNotes
+  unstable val saved: SavedStateHandle
+  stable val restoredDraft: Boolean
+  unstable val all: MutableStateFlow<NotesUiState>
+  unstable val query: MutableStateFlow<String>
+  unstable val editId: StateFlow<Long>
+  unstable val draft: StateFlow<TrackNote>
+  unstable val state: StateFlow<NotesUiState>
+  unstable var draftJob: Job?
+  <runtime stability> = Unstable
+}

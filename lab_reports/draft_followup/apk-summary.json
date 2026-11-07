@@ -1,0 +1,20 @@
+[
+  {
+    "path": "app/build/outputs/apk/debug/app-debug.apk",
+    "sha256": "4f178b6c97890075bbc7f4d2d02ed369e9784cf43794f42f0dc9d08015a5256f",
+    "size_bytes": 27807694,
+    "signing": "local debug signing, installed-user signing compatibility not established"
+  },
+  {
+    "path": "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+    "sha256": "06edff4b6418e919f7612218e8a5c4e150722183fc0d54b2a27d6d466baa2754",
+    "size_bytes": 1134970,
+    "signing": "local debug signing, installed-user signing compatibility not established"
+  },
+  {
+    "path": "app/build/outputs/apk/release/app-release-unsigned.apk",
+    "sha256": "39e7bcb99b61d30069fd3cc827949849ce02fb3af0da6808811726f616d8635c",
+    "size_bytes": 5016826,
+    "signing": "unsigned, owner local signing required"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "scope": "Own empty AOSP Android13 x86_64 AVD; no hardware acceleration, no accounts, cameras disabled",
+  "identity_confirmed": true,
+  "boot_completed": false,
+  "instrumentation_started": false,
+  "observed_at": "2026-10-09T13:37:35.217314+00:00",
+  "additional_wait_seconds_max": 75
+}

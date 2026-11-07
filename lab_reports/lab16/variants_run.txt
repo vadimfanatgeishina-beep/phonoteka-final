@@ -1,0 +1,8 @@
+F-01/F-06 config: REPRODUCED in vulnerable, BLOCKED in project
+F-02 auth gate: REPRODUCED / BLOCKED
+F-03 download limit: REPRODUCED / BLOCKED
+F-04 migration: REPRODUCED / BLOCKED
+F-05 diagnostics: REPRODUCED / BLOCKED
+F-07 webview: REPRODUCED / BLOCKED
+F-08 clipboard: REPRODUCED / BLOCKED
+Lab16 vulnerable/hardened variants: OK (42 checks)

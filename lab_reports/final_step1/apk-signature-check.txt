@@ -1,0 +1,1 @@
+Debug and androidTest APK signature verification PASS

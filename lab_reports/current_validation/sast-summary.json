@@ -1,0 +1,8 @@
+{
+  "scanner": "semgrep",
+  "rules": 2,
+  "source_files_reported": 78,
+  "findings": 0,
+  "errors": 0,
+  "scope": "app/src/main/java only; two local rules, telemetry off; not comprehensive SAST"
+}

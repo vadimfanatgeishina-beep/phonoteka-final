@@ -1,0 +1,19 @@
+Actual invocation: ./gradlew -PwithBenchmarks=true :benchmark:compileBenchmarkKotlin --no-daemon --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+Scope: Kotlin benchmark-module compilation only, not app benchmark target packaging/performance/auth bypass.
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build
+> Task :benchmark:checkKotlinGradlePluginConfigurationErrors
+> Task :benchmark:preBuild UP-TO-DATE
+> Task :benchmark:preBenchmarkBuild UP-TO-DATE
+> Task :benchmark:checkBenchmarkAarMetadata
+> Task :benchmark:generateBenchmarkResValues FROM-CACHE
+> Task :benchmark:mapBenchmarkSourceSetPaths
+> Task :benchmark:generateBenchmarkResources
+> Task :benchmark:mergeBenchmarkResources
+> Task :benchmark:processBenchmarkManifest
+> Task :benchmark:processBenchmarkResources
+> Task :benchmark:compileBenchmarkKotlin
+
+BUILD SUCCESSFUL in 44s
+9 actionable tasks: 8 executed, 1 from cache

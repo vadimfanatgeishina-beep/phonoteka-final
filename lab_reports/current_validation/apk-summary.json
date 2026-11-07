@@ -1,0 +1,20 @@
+[
+  {
+    "path": "app/build/outputs/apk/debug/app-debug.apk",
+    "size_bytes": 30683966,
+    "sha256": "e56a9a8de9a2be081a944e8f4b46eab6e4ac551e2bbb2ba16c9bc65a84a9db19",
+    "signing": "local debug signing; apksigner verify succeeded"
+  },
+  {
+    "path": "app/build/outputs/apk/release/app-release-unsigned.apk",
+    "size_bytes": 5016826,
+    "sha256": "b5b53a3f00506164c229b9ec61f8e52bffadafc287b0c820b17e347a0f4b5693",
+    "signing": "unsigned, owner local signing required"
+  },
+  {
+    "path": "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+    "size_bytes": 1124734,
+    "sha256": "11f71ede34b595f8055033892a467148bd9247125683e2de24e28e192bfd2133",
+    "signing": "local debug signing; apksigner verify succeeded"
+  }
+]

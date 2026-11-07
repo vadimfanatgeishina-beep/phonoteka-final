@@ -1,0 +1,11 @@
+{
+  "retrieved_at": "2026-10-09T13:23:20.025383+00:00",
+  "source": "https://api.osv.dev/v1/querybatch",
+  "dependency_source": "app/build/intermediates/incremental/lintAnalyzeDebug/debug-artifact-dependencies.xml",
+  "coordinate_count": 136,
+  "finding_count": 0,
+  "unique_vulnerabilities": 0,
+  "findings": [],
+  "advisories": [],
+  "coverage_limit": "Version matching only. Shaded libraries, Android applicability, exploitability and original Git history are not established by this query."
+}
