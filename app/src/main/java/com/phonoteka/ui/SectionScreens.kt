@@ -460,7 +460,7 @@ fun JournalSection(
     if (confirmClearAudit) AlertDialog(
         onDismissRequest = { confirmClearAudit = false },
         title = { Text("Очистить журнал событий?") },
-        text = { Text("Старые записи будут удалены. В новом журнале останется проверяемая запись об очистке.") },
+        text = { Text("Старые события будут скрыты из этого списка. Полная история сохранится для проверки целостности и экспорта. В списке останется отметка об очистке.") },
         confirmButton = { TextButton(onClick = {
             confirmClearAudit = false
             refreshScope.launch {

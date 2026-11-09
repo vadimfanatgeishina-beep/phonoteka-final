@@ -227,23 +227,26 @@ class UnifiedAuditLog(context: Context, private val now: () -> Long = System::cu
     }
 
     /** Последние записи для журнала в интерфейсе. */
-    fun recent(limit: Int = 200): List<AuditEvent> = readVerified()?.takeLast(limit).orEmpty()
+    fun recent(limit: Int = 200): List<AuditEvent> {
+        val events = readVerified() ?: return emptyList()
+        val boundary = events.indexOfLast { it.source == AuditSource.AUDIT && it.action == "clear_view" }
+        return events.drop(if (boundary < 0) 0 else boundary).takeLast(limit)
+    }
 
-    /** Очищает историю по явному запросу пользователя и начинает новую проверяемую цепочку. */
+    /** Очищает видимый список, сохраняя полную цепочку для проверки и экспорта. */
     fun clearHistory(): Int = synchronized(lock) {
-        val removed = readVerified()?.size ?: 0
-        directory.mkdirs()
-        if (file.exists()) check(file.delete()) { "Could not clear audit history" }
+        check(readVerified() != null) { "Audit integrity failed; history cannot be hidden" }
+        val removed = recent(Int.MAX_VALUE).size
         check(record(AuditEvent(
             type = AuditEventType.AUDIT_CHECK,
             source = AuditSource.AUDIT,
             timestamp = now(),
             userId = "local-user",
             role = "USER",
-            action = "clear_history",
+            action = "clear_view",
             subject = "unified audit log",
             result = "CLEARED",
-            reason = "Пользователь очистил журнал; удалено записей: $removed",
+            reason = "Пользователь очистил видимый список; скрыто записей: $removed. Полная история сохранена.",
             sessionId = sessionId,
             device = deviceLabel
         ))) { "Could not record audit clear marker" }
