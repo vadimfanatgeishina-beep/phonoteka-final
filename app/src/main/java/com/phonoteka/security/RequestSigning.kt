@@ -82,10 +82,10 @@ class ReplayGuard(private val maxEntries: Int = DEFAULT_MAX_ENTRIES) {
     companion object { private const val DEFAULT_MAX_ENTRIES = 50_000 }
 }
 
-class HmacSigningInterceptor(private val signer: HmacRequestSigner) : Interceptor {
+class HmacSigningInterceptor(private val signer: HmacRequestSigner, private val allowedHost: String = "localhost") : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        require(request.url.host == "localhost" && request.url.scheme == "https") { "Signing is restricted to the owned local TLS fixture" }
+        require(request.url.host == allowedHost && request.url.scheme == "https") { "Signing is restricted to the owned local TLS fixture" }
         require(request.body?.isDuplex() != true) { "Duplex signing is not supported by the local fixture" }
         val buffer = Buffer()
         var written = 0L

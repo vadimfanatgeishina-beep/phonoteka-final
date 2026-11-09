@@ -39,7 +39,8 @@ data class LiveSocketMetrics(val connected: Boolean = false, val attempts: Int =
     val boundUserTag: String? = null)
 
 /**
- * Own localhost only. Lifecycle owner calls close; no background/global coroutine scope is used.
+ * Owned fixture host only (localhost by default, or the exact host read from a short-lived peer QR).
+ * Lifecycle owner calls close; no background/global coroutine scope is used.
  * ЛР15: если передан [userBinding], каждая попытка подключения:
  *  - берёт текущего пользователя (нет пользователя — нет подключения);
  *  - строит канал /lab15/u/<хеш>/<uuid> и одноразовый билет на 30 с, привязанный к каналу и версии сессии;
@@ -48,7 +49,7 @@ data class LiveSocketMetrics(val connected: Boolean = false, val attempts: Int =
  */
 class LocalLiveSocket(private val client: OkHttpClient, private val signer: HmacTextFrameSigner,
     private val scope: CoroutineScope, private val backoffMillis: Long = 1000, private val maxReconnects: Int = 5,
-    private val userBinding: SocketUserBinding? = null) : Closeable {
+    private val userBinding: SocketUserBinding? = null, private val allowedHost: String = "localhost") : Closeable {
     private val mutable = MutableStateFlow(LiveSocketMetrics())
     val metrics: StateFlow<LiveSocketMetrics> = mutable.asStateFlow()
     private var job: Job? = null
@@ -61,12 +62,12 @@ class LocalLiveSocket(private val client: OkHttpClient, private val signer: Hmac
      * OkHttp моделирует защищённый WebSocket-хендшейк как обычный HTTPS: `HttpUrl`
      * не понимает схему `wss` и выбросил бы IllegalArgumentException. Поэтому `wss://`
      * нормализуется в `https://`, а апгрейд до WebSocket выполняет сам OkHttp.
-     * Принимается ТОЛЬКО собственный локальный стенд (localhost, без учётных данных).
+     * Принимается только адрес разрешённого собственного стенда, без учётных данных в URL.
      */
     fun connect(url: String) {
         val normalized = normalizeLabWsUrl(url)
         val request = Request.Builder().url(normalized).build()
-        require(request.url.scheme == "https" && request.url.host == "localhost" &&
+        require(request.url.scheme == "https" && request.url.host == allowedHost &&
             request.url.username.isEmpty() && request.url.password.isEmpty())
         require(request.url.encodedPath == "/ws" && request.url.query == null)
         close()
@@ -116,7 +117,9 @@ class LocalLiveSocket(private val client: OkHttpClient, private val signer: Hmac
                     override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { ended.complete(Unit) }
                     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { webSocket.close(code, reason) }
                     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                        if (isActive && activeChannel == channel) mutable.update { it.copy(terminalError = "Local WSS connection failed") }
+                        if (isActive && activeChannel == channel) mutable.update {
+                            it.copy(terminalError = "Local WSS connection failed: ${t.javaClass.simpleName}")
+                        }
                         ended.complete(Unit)
                     }
                 })

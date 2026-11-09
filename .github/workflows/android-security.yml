@@ -36,7 +36,11 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: android-actions/setup-android@v4
       - run: chmod +x gradlew
-      - run: ./gradlew :app:testVulnerableDebugUnitTest :app:testHardenedDebugUnitTest :app:lintVulnerableDebug :app:lintHardenedDebug :app:assembleVulnerableRelease :app:assembleHardenedRelease :app:assembleVulnerableDebugAndroidTest :app:assembleHardenedDebugAndroidTest --no-daemon
+      # Keep R8, lint, and both flavor test compilers out of one Gradle JVM.
+      - run: ./gradlew :app:testVulnerableDebugUnitTest :app:testHardenedDebugUnitTest --no-daemon --max-workers=2 --no-parallel
+      - run: ./gradlew :app:lintVulnerableDebug :app:lintHardenedDebug --no-daemon --max-workers=2 --no-parallel
+      - run: ./gradlew :app:assembleVulnerableRelease :app:assembleHardenedRelease --no-daemon --max-workers=2 --no-parallel
+      - run: ./gradlew :app:assembleVulnerableDebugAndroidTest :app:assembleHardenedDebugAndroidTest --no-daemon --max-workers=2 --no-parallel
       - if: always()
         uses: actions/upload-artifact@v4
         with:

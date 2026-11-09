@@ -389,7 +389,9 @@ private fun SectionNavHost(
             composable("profile/access") { Lab14AccessScreen(onBack = onBack) }
 
             // ЛР15: живой сетевой канал — в контексте журнала.
-            composable("journal/live") { com.phonoteka.ui.screens.Lab15LiveScreen(onBack = onBack) }
+            composable("journal/live") { com.phonoteka.ui.screens.Lab15LiveScreen(onBack = onBack,
+                onPeer = { controller.navigate("journal/live/peer") }) }
+            composable("journal/live/peer") { com.phonoteka.ui.screens.Lab15PeerScreen(onBack = onBack) }
 
             // ЛР9: трекер задач с анимациями — в контексте главной (реальные действия).
             composable("tasks") {

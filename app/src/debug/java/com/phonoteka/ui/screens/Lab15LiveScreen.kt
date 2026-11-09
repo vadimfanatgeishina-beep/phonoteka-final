@@ -48,7 +48,7 @@ import javax.crypto.spec.SecretKeySpec
  * стенда вводится как wss://, а внутри превращается в https:// (см. normalizeLabWsUrl).
  */
 @Composable
-fun Lab15LiveScreen(onBack: () -> Unit) {
+fun Lab15LiveScreen(onBack: () -> Unit, onPeer: () -> Unit) {
     val scope = rememberCoroutineScopeCompat()
     val app = LocalContext.current.applicationContext as com.phonoteka.PhonotekaApp
     val keys = remember { runCatching { UserBoundSocketKeys(BuildConfig.LOCAL_FIXTURE_KEY.toByteArray()) }.getOrNull() }
@@ -103,6 +103,7 @@ fun Lab15LiveScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Живой сетевой канал · ЛР15", style = MaterialTheme.typography.titleLarge)
+        Button(onClick = onPeer) { Text("WSS между двумя телефонами · без компьютера") }
         Text("Это проверка защищённого соединения с учебным сервером на компьютере. Для работы нужен запущенный WSS-стенд и adb reverse порта 8444. Без стенда подключение честно покажет ошибку.")
         Text("Порядок: подключиться → запросить статус → отправить подписанный запрос → увидеть рост счётчиков «Отправлено» и «Принято». Ошибка и повтор проверяют восстановление соединения.")
 

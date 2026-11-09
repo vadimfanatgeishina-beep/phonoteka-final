@@ -181,6 +181,8 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    debugImplementation("com.squareup.okhttp3:mockwebserver:4.12.0") // Owned WSS fixture hosted by the second phone.
+    debugImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

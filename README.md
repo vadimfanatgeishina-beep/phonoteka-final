@@ -14,7 +14,7 @@
 .\gradlew.bat :app:lintVulnerableDebug :app:lintHardenedDebug
 ```
 
-APK находятся в `app/build/outputs/apk/vulnerable/debug/` и `app/build/outputs/apk/hardened/debug/`. Debug-сборки используют тестовый ключ Android и предназначены для локального учебного стенда. Release-сборки требуют отдельной подписи перед распространением. Работающий локальный WSS-стенд описан в [LAB15_WSS_LOCAL.md](LAB15_WSS_LOCAL.md); он требует компьютера и `adb reverse`.
+APK находятся в `app/build/outputs/apk/vulnerable/debug/` и `app/build/outputs/apk/hardened/debug/`. Debug-сборки используют тестовый ключ Android и предназначены для локального учебного стенда. Подписанные release-сборки публикуются отдельно. Локальный WSS-стенд с компьютером описан в [LAB15_WSS_LOCAL.md](LAB15_WSS_LOCAL.md); вариант между двумя телефонами без компьютера — в [LAB15_WSS_TWO_PHONES.md](LAB15_WSS_TWO_PHONES.md). Оба учебных WSS-стенда доступны только в debug.
 
 Переключатели защит учебного стенда описаны в [RUNTIME_SECURITY_CONTROLS.md](RUNTIME_SECURITY_CONTROLS.md). Полноценного удалённого аккаунта и синхронизации между телефонами сейчас нет.
 
