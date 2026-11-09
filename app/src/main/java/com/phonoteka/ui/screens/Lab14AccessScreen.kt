@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -24,12 +26,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -48,6 +52,9 @@ import com.phonoteka.security.RuntimeSignalProbe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.Image
+import com.phonoteka.ui.components.qrImage
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +73,19 @@ fun Lab14AccessScreen(onBack: () -> Unit) {
     var generation by remember { mutableStateOf(0L) }
     var busy by remember { mutableStateOf(false) }
     var passVisible by remember { mutableStateOf(false) }
+    var recipientRole by remember { mutableStateOf(DemoRole.EMPLOYEE) }
+    var accessQr by remember { mutableStateOf<String?>(null) }
+    var accessExpiresAt by remember { mutableStateOf(0L) }
+    var accessRemainingSeconds by remember { mutableStateOf(0L) }
+    val downloadUrl = "https://github.com/vadimfanatgeishina-beep/phonoteka-final/releases/latest/download/Phonoteka-hardened.apk"
+    LaunchedEffect(accessExpiresAt) {
+        while (accessExpiresAt > 0L) {
+            val left = ((accessExpiresAt - android.os.SystemClock.elapsedRealtime() + 999) / 1000).coerceAtLeast(0)
+            accessRemainingSeconds = left
+            if (left == 0L) { accessQr = null; break }
+            delay(1_000)
+        }
+    }
     val scope = rememberCoroutineScope()
     fun <T> perform(action: () -> T, apply: (T) -> Unit) {
         if (busy) return
@@ -152,7 +172,8 @@ fun Lab14AccessScreen(onBack: () -> Unit) {
                 androidx.compose.foundation.layout.Row {
                     RadioButton(enabled = !busy, selected = role == option, onClick = {
                         generation++; pendingAuditSession = null
-                        app.clearStepUpSession(); passVisible = false; role = option; roleSession.select(option); entries = emptyList(); result = "Роль переключена на ${option.name}"
+                        app.clearStepUpSession(); passVisible = false; accessQr = null; accessExpiresAt = 0L
+                        role = option; roleSession.select(option); entries = emptyList(); result = "Роль переключена на ${option.name}"
                         val actor = roleSession.session
                         perform({ auditRepository.record(actor, "role.select", true, "role:${option.name}") }, {})
                     })
@@ -171,6 +192,60 @@ fun Lab14AccessScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall
             )
             Button(enabled = !busy, onClick = ::requestPermission) { Text("Запросить разрешение уведомлений") }
+            Card {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("QR1 · Скачать Фонотеку", style = MaterialTheme.typography.titleMedium)
+                    Text("Отсканируйте системной камерой второго телефона. Откроется загрузка защищённой версии с GitHub; установку подтвердит Android.")
+                    Image(remember(downloadUrl) { qrImage(downloadUrl, 360) },
+                        contentDescription = "QR1: загрузка защищённой Фонотеки",
+                        modifier = Modifier.size(220.dp).align(Alignment.CenterHorizontally))
+                    Text(downloadUrl, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Card {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("QR2 · Временный доступ", style = MaterialTheme.typography.titleMedium)
+                    Text("После установки откройте этот код камерой второго телефона. Телефоны должны быть в одной точке доступа. Код действует две минуты и погашается при первом входе.")
+                    if (app.localAuth.isSessionActive()) {
+                        Text("Выдача доступна владельцу после входа в приложение. Роли в этом стенде учебные.")
+                        listOf(DemoRole.EMPLOYEE, DemoRole.ADMIN).forEach { option ->
+                            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = recipientRole == option, onClick = {
+                                    recipientRole = option; accessQr = null; accessExpiresAt = 0L
+                                })
+                                Text(if (option == DemoRole.ADMIN) "Администратор" else "Сотрудник")
+                            }
+                        }
+                        Button(enabled = !busy, onClick = {
+                            val selectedRole = recipientRole
+                            perform({
+                                check(app.localAuth.isSessionActive()) { "Для выдачи QR2 нужен вход владельца" }
+                                val endpoint = app.quickAccessServer.start()
+                                val grant = app.quickAccessServer.issue(selectedRole)
+                                val uri = app.quickAccessServer.grantUri(grant, endpoint)
+                                app.auditEvent(com.phonoteka.security.AuditEventType.QR_ISSUE,
+                                    com.phonoteka.security.AuditSource.QR, "qr2.issue", selectedRole.name,
+                                    "ALLOWED", includeIp = true)
+                                uri to grant.expiresAtElapsed
+                            }, { issued ->
+                                accessQr = issued.first; accessExpiresAt = issued.second
+                                result = "QR2 выдан для роли ${selectedRole.name}. Сканируйте вторым телефоном."
+                            })
+                        }) { Text("Выдать QR2") }
+                        accessQr?.let { payload ->
+                            Image(remember(payload) { qrImage(payload, 360) },
+                                contentDescription = "QR2: временный вход в Фонотеку",
+                                modifier = Modifier.size(220.dp).align(Alignment.CenterHorizontally))
+                            Text("Осталось $accessRemainingSeconds с · роль ${recipientRole.name}")
+                            TextButton(onClick = {
+                                app.quickAccessServer.close()
+                                accessQr = null; accessExpiresAt = 0L
+                                result = "Выдача QR2 остановлена. Все показанные билеты отозваны."
+                            }) { Text("Отозвать QR2") }
+                        }
+                    } else Text("Для выдачи QR2 войдите в приложение как владелец.")
+                }
+            }
             Button(enabled = !busy, onClick = {
                 perform({ app.requireAuthority(DemoScope.LIBRARY_READ, "invite.open") }, {
                     context.startActivity(Intent(context, com.phonoteka.TrackInviteActivity::class.java))

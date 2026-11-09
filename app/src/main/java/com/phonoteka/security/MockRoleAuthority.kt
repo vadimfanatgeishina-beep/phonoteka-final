@@ -32,12 +32,13 @@ class MockRoleAuthority(private val now: () -> Long = System::currentTimeMillis)
     private data class Grant(val role: DemoRole, val expires: Long, val actorId: String = "mock:student")
     private val grants = mutableMapOf<String, Grant>()
     private fun digest(token: String) = MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
-    @Synchronized fun issue(role: DemoRole, actorId: String = "mock:student"): DemoSession {
+    @Synchronized fun issue(role: DemoRole, actorId: String = "mock:student", ttlMillis: Long = 5 * 60_000L): DemoSession {
         require(actorId.matches(Regex("[A-Za-z0-9:._-]{1,64}"))) { "Invalid fixture actor id" }
+        require(ttlMillis in 1..(30 * 60_000L)) { "Invalid fixture grant lifetime" }
         // Role fixture selection invalidates previous grants, including a previous ADMIN grant.
         grants.clear()
         val token = ByteArray(32).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
-        grants[digest(token)] = Grant(role, now() + 5 * 60_000, actorId)
+        grants[digest(token)] = Grant(role, now() + ttlMillis, actorId)
         return DemoSession(role, DemoRolePolicy.scopes(role), token, actorId)
     }
     @Synchronized fun authorize(session: DemoSession, scope: DemoScope): Boolean {

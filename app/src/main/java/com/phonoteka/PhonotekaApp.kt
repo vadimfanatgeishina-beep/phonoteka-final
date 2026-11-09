@@ -103,6 +103,19 @@ class PhonotekaApp : Application() {
             resource, scope.wire, "ALLOWED")
     }
     val roleSession by lazy { com.phonoteka.security.DemoRoleSession(this) }
+    val quickAccessServer by lazy {
+        com.phonoteka.security.LocalQrAccessServer(this,
+            onRedeemed = { role, actorId ->
+                runCatching { auditEvent(com.phonoteka.security.AuditEventType.ACCESS_ALLOWED,
+                    com.phonoteka.security.AuditSource.QR, "qr2.redeemed", actorId, "ALLOWED",
+                    reason = "role:${role.name}", includeIp = true) }
+            },
+            onDenied = { reason ->
+                runCatching { auditEvent(com.phonoteka.security.AuditEventType.ACCESS_DENIED,
+                    com.phonoteka.security.AuditSource.QR, "qr2.rejected", "ticket", "DENIED",
+                    reason = reason, includeIp = true) }
+            })
+    }
     val accessAudit by lazy { com.phonoteka.security.AccessAuditRepository(this, roleSession.authority,
         readGate = { requireAuthority(com.phonoteka.security.DemoScope.AUDIT_READ, "audit.read") },
         exportGate = { requireAuthority(com.phonoteka.security.DemoScope.AUDIT_READ, "audit.export") }) }

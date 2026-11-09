@@ -18,11 +18,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Local back-camera decoder. Never stores frames or sends camera bytes to a service. */
-@Composable fun OwnedQrScanner(modifier: Modifier = Modifier, onCode: (String) -> Unit, onError: () -> Unit) {
+@Composable fun OwnedQrScanner(modifier: Modifier = Modifier, onCode: (String) -> Unit, onError: () -> Unit,
+    accepts: (String) -> Boolean = { it.startsWith("PHONOTEKA-INVITE-1\n") }) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val latestCode by rememberUpdatedState(onCode)
     val latestError by rememberUpdatedState(onError)
+    val latestAccepts by rememberUpdatedState(accepts)
     val previewView = remember(context) { PreviewView(context) }
     AndroidView(factory = { previewView }, modifier = modifier)
     DisposableEffect(owner, previewView) {
@@ -45,7 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean
                     }
                     val source = PlanarYUVLuminanceSource(y, image.width, image.height, 0, 0, image.width, image.height, false)
                     val result = QRCodeReader().decode(BinaryBitmap(HybridBinarizer(source)), mapOf(DecodeHintType.TRY_HARDER to true))
-                    if (result.text.startsWith("PHONOTEKA-INVITE-1\n") && result.text.length <= 512 && delivered.compareAndSet(false, true)) {
+                    if (result.text.length <= 512 && latestAccepts(result.text) && delivered.compareAndSet(false, true)) {
                         ContextCompat.getMainExecutor(context).execute { if (alive.get()) latestCode(result.text) }
                     }
                 }

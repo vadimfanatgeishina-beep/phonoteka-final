@@ -126,6 +126,12 @@ class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryN
         markAuthenticated()
     }
 
+    /** An explicit two-phone QR grant opens only a local, time-limited classroom session. */
+    @Synchronized fun markQuickAccessSession(role: DemoRole) {
+        recordAudit("quick_access_login_${role.name.lowercase()}")
+        markAuthenticated()
+    }
+
     @Synchronized fun lock() {
         lastAuthenticationElapsed = null
         _authState.value = AuthenticationSnapshot(authenticationVersion, null)

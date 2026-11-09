@@ -1,6 +1,11 @@
 package com.phonoteka.security
 
 import android.content.Context
+import android.os.SystemClock
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+data class QuickAccessGrantInfo(val role: DemoRole, val actorId: String, val expiresAtElapsed: Long)
 
 class DemoRoleSession(context: Context, val authority: MockRoleAuthority = MockRoleAuthority()) {
     private val prefs = context.getSharedPreferences("phonoteka_demo_role", Context.MODE_PRIVATE)
@@ -11,17 +16,34 @@ class DemoRoleSession(context: Context, val authority: MockRoleAuthority = MockR
      * идентификатор попадает в канал WSS и в журнал, поэтому смена видна.
      */
     @Volatile private var actorId: String = DEFAULT_ACTOR
+    private var quickAccessExpiresAtElapsed = 0L
+    @Volatile var onQuickAccessExpired: (() -> Unit)? = null
     private var issued = authority.issue(selected, actorId)
     private val mutableRole = kotlinx.coroutines.flow.MutableStateFlow(selected)
+    private val mutableQuickAccess = MutableStateFlow<QuickAccessGrantInfo?>(null)
     val changes: kotlinx.coroutines.flow.StateFlow<DemoRole> = mutableRole
+    val quickAccess: StateFlow<QuickAccessGrantInfo?> = mutableQuickAccess
     val role: DemoRole get() = selected
     val currentActorId: String get() = actorId
+    @get:Synchronized val activeQuickAccess: QuickAccessGrantInfo? get() {
+        session // Enforce expiry before returning the visible grant.
+        return mutableQuickAccess.value
+    }
     @get:Synchronized val session: DemoSession get() {
-        if (!authority.valid(issued)) issued = authority.issue(selected, actorId)
+        if (quickAccessExpiresAtElapsed > 0L && SystemClock.elapsedRealtime() >= quickAccessExpiresAtElapsed) {
+            resetToEmployee()
+            onQuickAccessExpired?.invoke()
+        } else if (!authority.valid(issued)) {
+            if (quickAccessExpiresAtElapsed > 0L) {
+                resetToEmployee()
+                onQuickAccessExpired?.invoke()
+            } else issued = authority.issue(selected, actorId)
+        }
         return issued
     }
     @Synchronized fun select(role: DemoRole) {
         check(com.phonoteka.BuildConfig.DEBUG) { "Role selection is debug-only" }
+        quickAccessExpiresAtElapsed = 0L; mutableQuickAccess.value = null
         selected = role; actorId = actorFor(role); issued = authority.issue(role, actorId); mutableRole.value = role
     }
     /**
@@ -32,12 +54,23 @@ class DemoRoleSession(context: Context, val authority: MockRoleAuthority = MockR
         check(com.phonoteka.BuildConfig.DEBUG) { "User switching is debug-only" }
         if (!nextActorId.matches(Regex("[A-Za-z0-9:._-]{1,64}"))) return false
         if (nextActorId == actorId) return false
+        quickAccessExpiresAtElapsed = 0L; mutableQuickAccess.value = null
         actorId = nextActorId
         issued = authority.issue(selected, actorId)
         return true
     }
     @Synchronized fun resetToEmployee() {
+        quickAccessExpiresAtElapsed = 0L; mutableQuickAccess.value = null
         selected = DemoRole.EMPLOYEE; actorId = DEFAULT_ACTOR; issued = authority.issue(selected, actorId); mutableRole.value = selected
+    }
+    @Synchronized fun acceptQuickAccess(role: DemoRole, recipientActorId: String, ttlMillis: Long) {
+        require(ttlMillis in 1..(30 * 60_000L))
+        require(recipientActorId.matches(Regex("qr:[A-Za-z0-9-]{36}")))
+        selected = role; actorId = recipientActorId
+        quickAccessExpiresAtElapsed = SystemClock.elapsedRealtime() + ttlMillis
+        issued = authority.issue(role, actorId, ttlMillis)
+        mutableRole.value = role
+        mutableQuickAccess.value = QuickAccessGrantInfo(role, actorId, quickAccessExpiresAtElapsed)
     }
     fun canAccess(scope: DemoScope) = authority.authorize(session, scope)
     fun recordPermissionPrompted() { prefs.edit().putBoolean("notifications_asked", true).apply() }

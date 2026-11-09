@@ -36,6 +36,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
     authenticator: TotpAuthenticatorManager, biometricAvailable: Boolean,
     onBiometric: () -> Unit, onEnrollBiometric: () -> Unit, onUnlock: () -> Unit,
+    onQuickAccess: () -> Unit,
     biometricSaved: Boolean = false, biometricBusy: Boolean = false, biometricMessage: String? = null,
     resumeAfterExpiry: Boolean = false) {
     val context = LocalContext.current
@@ -266,6 +267,9 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
             }
         }
         if (seconds > 0) Text("Повтор через $seconds с.")
+        OutlinedButton(enabled = !busy && !biometricBusy, onClick = onQuickAccess) {
+            Text("Войти по QR2 с другого телефона")
+        }
         if (busy || biometricBusy) CircularProgressIndicator()
         biometricMessage?.let { Text(it) }
         message?.let { Text(it) }

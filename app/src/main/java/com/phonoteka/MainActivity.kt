@@ -61,6 +61,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         val authApp = applicationContext as PhonotekaApp
         authManager = authApp.localAuth
+        sessionUnlocked = authApp.roleSession.activeQuickAccess != null && authManager.isSessionActive()
         biometricFlow = BiometricSessionFlow(authApp.lab13MockSession, authApp.biometricRefresh, android.os.SystemClock::elapsedRealtime)
         biometricSaved = authApp.biometricRefresh.hasSavedRefresh()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -126,6 +127,7 @@ class MainActivity : FragmentActivity() {
                             onBiometric = { showBiometricPrompt(BiometricSessionAction.RESTORE) },
                             onEnrollBiometric = { showBiometricPrompt(BiometricSessionAction.ENROLL) },
                             onUnlock = { sessionNotice = null; sessionUnlocked = true },
+                            onQuickAccess = { startActivity(Intent(this@MainActivity, QuickAccessActivity::class.java)) },
                             biometricSaved = biometricSaved,
                             biometricBusy = biometricBusy,
                             biometricMessage = biometricMessage ?: sessionNotice,
@@ -141,6 +143,8 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         com.phonoteka.labs.LabDeepLinks.offer(intent.data)
+        val app = application as PhonotekaApp
+        if (app.roleSession.activeQuickAccess != null && authManager.isSessionActive()) sessionUnlocked = true
     }
 
     override fun onPause() {

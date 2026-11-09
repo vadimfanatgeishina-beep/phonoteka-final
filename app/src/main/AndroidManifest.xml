@@ -39,6 +39,19 @@
 
         <!-- ЛР14: внутренний экран QR-приглашений треков: только явный intent из приложения. -->
         <activity android:name=".TrackInviteActivity" android:exported="false" />
+        <activity
+            android:name=".QuickAccessActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="phonoteka" android:host="quick-access" />
+            </intent-filter>
+        </activity>
         <!-- ЛР14: ЕДИНСТВЕННАЯ функциональная точка входа извне: регистрация по phonoteka://invite?token=...
              MainActivity exported только потому, что это LAUNCHER (требование Android), deep link details удалён. -->
         <activity
