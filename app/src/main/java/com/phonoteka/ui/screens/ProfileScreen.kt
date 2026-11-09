@@ -65,15 +65,17 @@ fun ProfileScreen(
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) scope.launch {
             runCatching { withContext(Dispatchers.IO) { copyAvatar(context, uri) } }
-                .onSuccess(viewModel::onAvatarChange)
-                .onFailure { photoError = "Не удалось прочитать фото. Выбери другое изображение." }
+                .onSuccess { viewModel.onAvatarChange(it); photoError = null }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it
+                    photoError = "Не удалось прочитать фото. Выбери другое изображение." }
         }
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
         if (bitmap != null) scope.launch {
             runCatching { withContext(Dispatchers.IO) { saveAvatar(context, bitmap) } }
-                .onSuccess(viewModel::onAvatarChange)
-                .onFailure { photoError = "Не удалось сохранить фото. Попробуй ещё раз." }
+                .onSuccess { viewModel.onAvatarChange(it); photoError = null }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it
+                    photoError = "Не удалось сохранить фото. Попробуй ещё раз." }
         }
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -213,32 +215,20 @@ fun ProfileScreen(
 private fun avatarDirectory(context: android.content.Context) = File(context.filesDir, "profile").also { it.mkdirs() }
 private fun avatarFile(context: android.content.Context) = File(avatarDirectory(context), "avatar_${UUID.randomUUID()}.jpg")
 
-private fun copyAvatar(context: android.content.Context, uri: Uri): String {
+internal suspend fun copyAvatar(context: android.content.Context, uri: Uri): String {
+    // Decode and normalize the image instead of storing arbitrary input under a .jpg name.
+    val image = prepareNoteImage(context, uri)
     val output = avatarFile(context)
     try {
-        context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "Image unavailable" }
-            output.outputStream().use { target ->
-                val buffer = ByteArray(8192)
-                var total = 0L
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= 8L * 1024 * 1024) { "Image too large" }
-                    target.write(buffer, 0, count)
-                }
-                require(total > 0) { "Empty image" }
-            }
-        }
+        output.outputStream().use { it.write(image.bytes); it.fd.sync() }
         return output.name
     } catch (failure: Exception) { output.delete(); throw failure }
 }
 
-private fun saveAvatar(context: android.content.Context, bitmap: Bitmap): String {
+internal fun saveAvatar(context: android.content.Context, bitmap: Bitmap): String {
     val output = avatarFile(context)
     try {
-        output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)) }
+        output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)); it.fd.sync() }
         return output.name
     } catch (failure: Exception) { output.delete(); throw failure }
 }
