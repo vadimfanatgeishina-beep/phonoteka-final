@@ -172,6 +172,7 @@ dependencies {
         version { strictly("1.23.2") }
     }
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-tls:4.12.0") // Ephemeral certificate for the owned phone identity host.
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.google.code.gson:gson:2.11.0")
@@ -182,7 +183,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     debugImplementation("com.squareup.okhttp3:mockwebserver:4.12.0") // Owned WSS fixture hosted by the second phone.
-    debugImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
