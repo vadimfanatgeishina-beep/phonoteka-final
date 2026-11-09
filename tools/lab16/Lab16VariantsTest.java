@@ -21,12 +21,47 @@ public final class Lab16VariantsTest {
         expect(v.stream().anyMatch(f -> f.id().equals("RES")), "debuggable reproduced");
         String vulnGradle = "buildTypes {\n release {\n isMinifyEnabled = false\n }\n}";
         expect(Lab16Variants.auditReleaseBuild(vulnGradle).size() == 2, "F-06 vulnerable build reproduced");
-        // Реальный hardened-снимок проекта
-        var m = Lab16Variants.auditManifest(Lab16Variants.read(root + "/app/src/main/AndroidManifest.xml"));
-        expect(m.isEmpty(), "real manifest hardened: " + m);
-        var g = Lab16Variants.auditReleaseBuild(Lab16Variants.read(root + "/app/build.gradle.kts"));
+        // The source manifest uses flavor placeholders. Check their declarations
+        // before evaluating the effective vulnerable and hardened configurations.
+        String sourceManifest = Lab16Variants.read(root + "/app/src/main/AndroidManifest.xml");
+        String gradle = Lab16Variants.read(root + "/app/build.gradle.kts");
+        expect(sourceManifest.contains("android:allowBackup=\"${allowBackup}\"")
+                && sourceManifest.contains("android:usesCleartextTraffic=\"${allowCleartext}\""),
+                "manifest must use flavor placeholders");
+        String vulnerable = flavorBlock(gradle, "vulnerable");
+        String hardened = flavorBlock(gradle, "hardened");
+        expect(vulnerable.contains("manifestPlaceholders[\"allowBackup\"] = \"true\"")
+                && vulnerable.contains("manifestPlaceholders[\"allowCleartext\"] = \"true\""),
+                "vulnerable flavor placeholders");
+        expect(hardened.contains("manifestPlaceholders[\"allowBackup\"] = \"false\"")
+                && hardened.contains("manifestPlaceholders[\"allowCleartext\"] = \"false\""),
+                "hardened flavor placeholders");
+        var m = Lab16Variants.auditManifest(sourceManifest
+                .replace("${allowBackup}", "false")
+                .replace("${allowCleartext}", "false"));
+        expect(m.isEmpty(), "effective hardened manifest: " + m);
+        var effectiveVulnerable = Lab16Variants.auditManifest(sourceManifest
+                .replace("${allowBackup}", "true")
+                .replace("${allowCleartext}", "true"));
+        expect(effectiveVulnerable.stream().anyMatch(f -> f.id().equals("F-01"))
+                && effectiveVulnerable.stream().anyMatch(f -> f.id().equals("NET")),
+                "effective vulnerable manifest reproduces F-01/NET");
+        var g = Lab16Variants.auditReleaseBuild(gradle);
         expect(g.isEmpty(), "real release build hardened: " + g);
         System.out.println("F-01/F-06 config: REPRODUCED in vulnerable, BLOCKED in project");
+    }
+
+    static String flavorBlock(String gradle, String name) {
+        String header = "create(\"" + name + "\") {";
+        int start = gradle.indexOf(header);
+        if (start < 0) throw new AssertionError("missing flavor: " + name);
+        int depth = 0;
+        for (int i = start + header.length() - 1; i < gradle.length(); i++) {
+            char c = gradle.charAt(i);
+            if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return gradle.substring(start, i + 1);
+        }
+        throw new AssertionError("unclosed flavor: " + name);
     }
 
     static void f02() {

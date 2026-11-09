@@ -9,20 +9,20 @@ jobs:
   sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
       - name: Semgrep (token log rule)
         run: |
           pip install semgrep==1.*
           semgrep scan --metrics=off --error --config tools/semgrep-security.yml app/src/main/java
       - name: Gitleaks (history)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-stands:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '22' }
       - run: java tools/lab16/Lab16VariantsTest.java .
@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - run: chmod +x gradlew
       - run: ./gradlew :app:testVulnerableDebugUnitTest :app:testHardenedDebugUnitTest :app:lintVulnerableDebug :app:lintHardenedDebug :app:assembleVulnerableRelease :app:assembleHardenedRelease :app:assembleVulnerableDebugAndroidTest :app:assembleHardenedDebugAndroidTest --no-daemon
       - if: always()
