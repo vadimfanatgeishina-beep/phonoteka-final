@@ -34,6 +34,7 @@ object AttachmentLimits {
 
     fun validate(attachments: List<NoteAttachment>) {
         if (attachments.size > MAX_COUNT) throw NoteException(NoteError.InvalidInput)
+        if (attachments.map { it.id }.toSet().size != attachments.size) throw NoteException(NoteError.InvalidInput)
         var total = 0
         for (attachment in attachments) {
             if (!attachment.id.matches(Regex("[A-Za-z0-9_-]{1,40}"))) throw NoteException(NoteError.InvalidInput)
@@ -72,6 +73,7 @@ class NoteArchiveCodec(private val crypto: NoteCrypto) {
 
     /** Собирает зашифрованный архив из заметок вместе с вложениями. */
     fun encode(notes: List<TrackNote>): ByteArray {
+        if (notes.map { it.id }.toSet().size != notes.size) throw NoteException(NoteError.InvalidInput)
         for (note in notes) AttachmentLimits.validate(note.attachments)
         val body = gson.toJson(ArchiveBody(notes)).toByteArray(Charsets.UTF_8)
         val digest = MessageDigest.getInstance("SHA-256").digest(body).joinToString("") { "%02x".format(it) }
@@ -114,6 +116,7 @@ class NoteArchiveCodec(private val crypto: NoteCrypto) {
             gson.fromJson(String(plain, Charsets.UTF_8), ArchiveBody::class.java).notes
         } catch (_: Exception) { throw NoteException(NoteError.Corrupted) }
         if (notes.size != header.noteCount) throw NoteException(NoteError.Corrupted)
+        if (notes.map { it.id }.toSet().size != notes.size) throw NoteException(NoteError.Corrupted)
         val attachments = notes.sumOf { it.attachments.size }
         if (attachments != header.attachmentCount) throw NoteException(NoteError.Corrupted)
         for (note in notes) AttachmentLimits.validate(note.attachments)
@@ -124,7 +127,7 @@ class NoteArchiveCodec(private val crypto: NoteCrypto) {
         const val FORMAT = "phonoteka-note-archive"
         const val SCHEMA_VERSION = 1
         val MAGIC = "PTKA1".toByteArray(Charsets.US_ASCII)
-        private const val MAX_HEADER = 4096
+        private const val MAX_HEADER = 255 // The on-disk format stores header length in one byte.
         private const val MAX_ARCHIVE = 24 * 1024 * 1024
     }
 }

@@ -72,6 +72,8 @@ fun TrackNotesScreen(viewModel: TrackNotesViewModel, onBack: () -> Unit) {
         if (uri == null) fileMessage = "Экспорт отменён" else scope.launch {
             try { documents.write(uri, viewModel.export()); fileMessage = "Экспорт v2 сохранён (обычный JSON; не секреты сессии)" }
             catch (e: CancellationException) { throw e }
+            catch (e: com.phonoteka.data.notes.NoteException) { fileMessage = if (e.reason == com.phonoteka.data.notes.NoteError.UnsavedChanges)
+                "Сначала нажми «Сохранить» в изменённых заметках — новые правки и фото ещё в черновиках." else "Ошибка экспорта" }
             catch (_: Exception) { fileMessage = "Ошибка экспорта" }
         }
     }
@@ -100,6 +102,8 @@ fun TrackNotesScreen(viewModel: TrackNotesViewModel, onBack: () -> Unit) {
                 documents.write(uri, viewModel.exportArchive())
                 fileMessage = "Зашифрованный архив сохранён: заметки вместе с картинками"
             } catch (e: CancellationException) { throw e }
+            catch (e: com.phonoteka.data.notes.NoteException) { fileMessage = if (e.reason == com.phonoteka.data.notes.NoteError.UnsavedChanges)
+                "Сначала нажми «Сохранить» в изменённых заметках — новые правки и фото ещё в черновиках." else "Ошибка экспорта архива" }
             catch (_: Exception) { fileMessage = "Ошибка экспорта архива" }
         }
     }
@@ -212,7 +216,7 @@ fun TrackNotesScreen(viewModel: TrackNotesViewModel, onBack: () -> Unit) {
         }
         HorizontalDivider()
         Text("Резервная копия", style = MaterialTheme.typography.titleMedium)
-        Text("Для переноса фото выбирай зашифрованный архив. JSON содержит только текст заметок.",
+        Text("Сначала сохрани изменённые заметки. Архив содержит текст и фото; JSON — только текст. Архив открывается на этом устройстве, пока сохранены ключи приложения. После удаления приложения или на другом телефоне он не откроется.",
             style = MaterialTheme.typography.bodySmall)
         // ЛР11: зашифрованный архив сохраняет и восстанавливает вложенные картинки.
         Button(onClick = { archiveExporter.launch("phonoteka-notes-archive.bin") }, enabled = !state.busy) {

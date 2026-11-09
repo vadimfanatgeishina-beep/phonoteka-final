@@ -216,9 +216,18 @@ class TrackNotesViewModel(private val repository: TrackNotes, private val saved:
         val id = editId.value
         setDraft(repository.draft(id) ?: all.value.notes.firstOrNull { it.note.id == id && !it.damaged }?.note ?: TrackNote(id, "", ""), false)
     }
-    suspend fun export(): ByteArray = repository.export()
+    suspend fun export(): ByteArray = exportNotes(archive = false)
     /** ЛР11: зашифрованный архив — сохраняет вложения вместе с заметками. */
-    suspend fun exportArchive(): ByteArray = repository.exportArchive()
+    suspend fun exportArchive(): ByteArray = exportNotes(archive = true)
+
+    private suspend fun exportNotes(archive: Boolean): ByteArray {
+        if (all.value.busy) throw NoteException(NoteError.Io)
+        all.update { it.copy(busy = true) }
+        return try {
+            awaitDrafts()
+            if (archive) repository.exportArchive() else repository.export()
+        } finally { all.update { it.copy(busy = false) } }
+    }
 
     /** ЛР11: подготовка импорта архива. Повреждённый архив падает ЗДЕСЬ, а не после «успеха». */
     fun prepareArchiveImport(bytes: ByteArray) = action {
@@ -251,6 +260,7 @@ class TrackNotesViewModel(private val repository: TrackNotes, private val saved:
         NoteError.TooLarge -> "Превышен лимит 5 МБ или 10 000 заметок."
         NoteError.UnsupportedVersion -> "Версия файла не поддерживается."
         NoteError.InvalidInput -> "Неверный формат или ID отсутствует в библиотеке."
+        NoteError.UnsavedChanges -> "Сначала сохраните изменённые заметки: в черновиках есть новые правки или фотографии."
         NoteError.Io -> "Ошибка ввода/вывода. Черновик не подтверждён как сохранённый."
     } else "Не удалось выполнить файловую операцию. Черновик не подтверждён как сохранённый."
     private fun action(block: suspend () -> Unit) = viewModelScope.launch {

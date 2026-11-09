@@ -30,6 +30,7 @@ sealed interface NoteError {
     data object TooLarge : NoteError
     data object UnsupportedVersion : NoteError
     data object InvalidInput : NoteError
+    data object UnsavedChanges : NoteError
 }
 class NoteException(val reason: NoteError) : IOException("Track-note storage failure: $reason")
 interface NoteCrypto {
@@ -260,7 +261,21 @@ class FileTrackNotesRepository(
         commit(catalog.copy(active = catalog.active - id.toString()))
         removeDraftFile(id); collectOrphans(); integrityEvent(id, "removed_damaged")
     }
+    private fun requireSavedDrafts() {
+        promoteAllLegacyDrafts()
+        val catalog = load()
+        for (file in cache.listFiles().orEmpty()) {
+            val id = Regex("track-note-([1-9][0-9]*)\\.enc").matchEntire(file.name)
+                ?.groupValues?.get(1)?.toLongOrNull() ?: continue
+            val draft = readDraft(file, id).copy(updatedAt = 0)
+            val stored = catalog.active[id.toString()]?.let { readEntry(id, it) }
+            if (stored?.damaged == true) throw NoteException(NoteError.Corrupted)
+            if (stored == null && draft.title.isBlank() && draft.text.isBlank() && draft.attachments.isEmpty()) continue
+            if (stored?.note?.copy(updatedAt = 0) != draft) throw NoteException(NoteError.UnsavedChanges)
+        }
+    }
     override suspend fun export(): ByteArray = io {
+        requireSavedDrafts()
         var omittedAttachments = false
         val notes = load().active.map { (id, e) ->
             val item = readEntry(id.toLong(), e)
@@ -277,6 +292,7 @@ class FileTrackNotesRepository(
 
     /** ЛР11: зашифрованный архив — единственный формат, который сохраняет вложения. */
     override suspend fun exportArchive(): ByteArray = io {
+        requireSavedDrafts()
         val notes = load().active.map { (id, e) ->
             val item = readEntry(id.toLong(), e)
             if (item.damaged) throw NoteException(NoteError.Corrupted)

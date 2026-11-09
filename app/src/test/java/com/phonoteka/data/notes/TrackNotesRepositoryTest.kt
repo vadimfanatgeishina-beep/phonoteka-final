@@ -46,6 +46,31 @@ class TrackNotesRepositoryTest {
         assertEquals(1, restored.importArchive(archive))
         assertEquals(attachments, restored.list().single().note.attachments)
     }
+    @Test fun changedPhotoDraftBlocksExportUntilExplicitSave() = runTest {
+        val root = temporary.newFolder()
+        val r = repo(root)
+        val initial = TrackNote(1, "Фото", "Текст")
+        r.save(initial)
+        val edited = initial.copy(attachments = listOf(NoteAttachment("new", "new.jpg", "image/jpeg",
+            AttachmentLimits.encodeBase64(byteArrayOf(1, 2, 3)))))
+        r.saveDraft(edited)
+        for (archive in listOf(false, true)) {
+            try {
+                if (archive) repo(root).exportArchive() else repo(root).export()
+                fail("Unsaved photo must not be silently omitted")
+            } catch (e: NoteException) { assertEquals(NoteError.UnsavedChanges, e.reason) }
+        }
+        r.save(edited)
+        assertEquals(edited.attachments, NoteArchiveCodec(crypto).decode(r.exportArchive()).single().attachments)
+    }
+    @Test fun duplicateNoteOrAttachmentIdsCannotEnterArchive() {
+        val note = TrackNote(1, "a", "b")
+        try { NoteArchiveCodec(crypto).encode(listOf(note, note)); fail("Duplicate note") }
+        catch (e: NoteException) { assertEquals(NoteError.InvalidInput, e.reason) }
+        val photo = NoteAttachment("same", "a.jpg", "image/jpeg", "AQ==")
+        try { AttachmentLimits.validate(listOf(photo, photo)); fail("Duplicate attachment") }
+        catch (e: NoteException) { assertEquals(NoteError.InvalidInput, e.reason) }
+    }
     @Test fun corruptedRevisionFallsBackToPreviousAuthenticatedRevision() = runTest {
         val root = temporary.newFolder()
         val first = TrackNote(1, "first", "text", updatedAt = 1000)
