@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -54,6 +55,8 @@ import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import com.phonoteka.data.Track
 import com.phonoteka.viewmodel.BatchOperationState
 import com.phonoteka.viewmodel.ListUiState
 import com.phonoteka.viewmodel.TrackListViewModel
@@ -64,19 +67,27 @@ fun TrackListScreen(
     viewModel: TrackListViewModel,
     onTrackClick: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onPlayDownloadedTrack: ((Track) -> Unit)? = null,
     modifier: Modifier = Modifier,
+    showLab9Tick: Boolean = true,
     // Injectable suspend gate: Compose's frame clock does not advance ordinary coroutine delay.
     awaitDraftDebounce: suspend () -> Unit = { delay(400) }
 ) {
     com.phonoteka.diagnostics.RecordRecomposition("TrackListScreen")
     val mayWrite = com.phonoteka.security.DemoScope.LIBRARY_WRITE in com.phonoteka.ui.LocalDemoPermissions.current
+    val context = LocalContext.current
+    val downloadFolder = remember(context) {
+        java.io.File(context.getExternalFilesDir(null) ?: context.filesDir, "downloads")
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
+    val phonotekaDownloadsOnly by viewModel.phonotekaDownloadsOnly.collectAsStateWithLifecycle()
     val totalCount by viewModel.totalCount.collectAsStateWithLifecycle(initialValue = 0)
     val doneCount by viewModel.doneCount.collectAsStateWithLifecycle(initialValue = 0)
     val importing by viewModel.localImport.collectAsStateWithLifecycle()
     val batchState by viewModel.batchState.collectAsStateWithLifecycle()
+    val celebrationTick by viewModel.downloadCelebrationTick.collectAsStateWithLifecycle()
     val addTrackState by viewModel.addTrackState.collectAsStateWithLifecycle()
     val savedAddTrackDraft by viewModel.addTrackDraft.collectAsStateWithLifecycle()
     val clearState by viewModel.clearState.collectAsStateWithLifecycle()
@@ -93,6 +104,13 @@ fun TrackListScreen(
     var titleInput by remember { mutableStateOf(savedAddTrackDraft.title) }
     var draftAutosaved by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showDownloadFolder by remember { mutableStateOf(false) }
+    var folderFiles by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(showDownloadFolder) {
+        if (showDownloadFolder) folderFiles = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            downloadFolder.listFiles()?.filter { it.isFile }?.sortedBy { it.name.lowercase() }?.map { it.name }.orEmpty()
+        }
+    }
     var labTick by remember { mutableIntStateOf(0) }
     var activeSeconds by remember { mutableIntStateOf(0) }
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -118,6 +136,7 @@ fun TrackListScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -143,7 +162,7 @@ fun TrackListScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("track-search"),
                 label = { Text("Исполнитель или песня") }, singleLine = true
             )
-            if (com.phonoteka.BuildConfig.DEBUG) {
+            if (com.phonoteka.BuildConfig.DEBUG && showLab9Tick) {
                 TextButton(onClick = { labTick++ }, modifier = Modifier.testTag("lab9-tick")) {
                     Text("Тик $labTick · активен $activeSeconds с. · ЛР9 recomposition")
                 }
@@ -159,12 +178,61 @@ fun TrackListScreen(
                     "Ошибки" to TrackStatus.ERROR
                 ).forEach { (label, status) ->
                     FilterChip(
-                        selected = statusFilter == status,
+                        selected = !phonotekaDownloadsOnly && statusFilter == status,
                         onClick = { viewModel.onStatusFilterChange(status) },
                         label = { Text(label) }
                     )
+                    if (status == TrackStatus.DONE) {
+                        FilterChip(
+                            selected = phonotekaDownloadsOnly,
+                            onClick = viewModel::showPhonotekaDownloads,
+                            label = { Text("Скачано Фонотекой") },
+                            modifier = Modifier.testTag("filter-phonoteka-downloads")
+                        )
+                    }
                 }
             }
+            if (phonotekaDownloadsOnly) {
+                Text("Здесь только треки, которые скачала Фонотека. Привязанные файлы телефона — в «На устройстве».",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { showDownloadFolder = true }, modifier = Modifier.testTag("open-phonoteka-folder")) {
+                    Text("Открыть папку загрузок")
+                }
+            }
+            if (showDownloadFolder) AlertDialog(
+                onDismissRequest = { showDownloadFolder = false },
+                title = { Text("Папка загрузок Фонотеки") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(downloadFolder.absolutePath, style = MaterialTheme.typography.bodySmall)
+                        Text("Файлов: ${folderFiles.size}", style = MaterialTheme.typography.labelMedium)
+                        LazyColumn(Modifier.heightIn(max = 280.dp)) {
+                            items(folderFiles.size) { index ->
+                                val fileName = folderFiles[index]
+                                val filePath = java.io.File(downloadFolder, fileName).absolutePath
+                                val track = viewModel.playbackCatalogue().firstOrNull {
+                                    it.filePath == filePath && TrackListViewModel.isPhonotekaDownload(it)
+                                }
+                                if (track != null && onPlayDownloadedTrack != null) {
+                                    TextButton(onClick = {
+                                        showDownloadFolder = false
+                                        onPlayDownloadedTrack(track)
+                                    }) {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(fileName)
+                                    }
+                                } else {
+                                    Text(fileName, Modifier.padding(vertical = 4.dp))
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showDownloadFolder = false }) { Text("Закрыть") } }
+            )
 
             // --- Кнопки пакетного поиска и скачивания ---
             Row(
@@ -256,6 +324,7 @@ fun TrackListScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(msg, style = MaterialTheme.typography.bodySmall)
+                        if (batchState.retryOperation != null) TextButton(onClick = viewModel::retryBatch) { Text("Повторить") }
                         TextButton(onClick = viewModel::clearBatchMessage) { Text("×") }
                     }
                 }
@@ -358,7 +427,8 @@ fun TrackListScreen(
                         CircularProgressIndicator()
                     }
                     is ListUiState.Empty -> LazyColumn(Modifier.fillMaxSize()) {
-                        item { Text(state.message, modifier = Modifier.padding(24.dp)) }
+                        item { Text(if (phonotekaDownloadsOnly) "Фонотека ещё не скачала музыку." else state.message,
+                            modifier = Modifier.padding(24.dp)) }
                     }
                     is ListUiState.Error -> Column(Modifier.fillMaxSize().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -398,6 +468,13 @@ fun TrackListScreen(
                                         .semantics { collectionItemInfo = CollectionItemInfo(index, 0, 0, 1) }
                                         .testTag("track-row-${track.id}")
                                         .animateItem())
+                                if (phonotekaDownloadsOnly && onPlayDownloadedTrack != null) {
+                                    TextButton(onClick = { onPlayDownloadedTrack(track) },
+                                        modifier = Modifier.testTag("play-download-${track.id}")) {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                                        Text("Воспроизвести")
+                                    }
+                                }
                                 // Разделитель между элементами (Лаба 5)
                                 if (index < state.tracks.lastIndex) {
                                     HorizontalDivider(
@@ -461,6 +538,9 @@ fun TrackListScreen(
                 }
             }
         }
+    }
+
+    com.phonoteka.ui.components.CelebrationBurst(celebrationTick, Modifier.matchParentSize())
     }
 
     // Диалог добавления трека

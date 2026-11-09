@@ -31,11 +31,13 @@ class LocalRoomCatalogContractTest {
             server.enqueue(MockResponse().setBody("""{"id":1,"userId":1,"title":"updated","body":"body"}"""))
             server.enqueue(MockResponse().setBody("""[{"postId":1,"id":1,"name":"local","email":"","body":"comment"}]"""))
             assertNull(repo.refreshDetails(1))
-            assertEquals("updated", repo.observePost(1).first()?.title)
+            assertEquals("updated", database.catalogPostDao().observePost(1).first()?.title)
+            assertEquals(MusicEditorial.post(CatalogPost(1, 1, "updated", "body")).title,
+                repo.observePost(1).first()?.title)
             assertEquals(1, repo.observeComments(1).first().size)
             server.enqueue(MockResponse().setResponseCode(503))
             assertEquals(CatalogApiError.Http(503), repo.refresh())
-            assertEquals("updated", repo.observePost(1).first()?.title)
+            assertEquals("updated", database.catalogPostDao().observePost(1).first()?.title)
         } finally { client.dispatcher.executorService.shutdown(); client.connectionPool.evictAll(); server.shutdown(); database.close() }
     }
 }

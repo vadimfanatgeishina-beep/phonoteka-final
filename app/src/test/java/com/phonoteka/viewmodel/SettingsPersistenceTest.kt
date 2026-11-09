@@ -23,8 +23,8 @@ class SettingsPersistenceTest {
         val first = SettingsViewModel(app, firstStore)
         val owner = ViewModelStore().apply { put("vm", first) }
         try {
-            first.setThemeMode(ThemeMode.DARK); first.setForceDarkContent(true)
-            val written = first.state.first { it.themeMode == ThemeMode.DARK && it.forceDarkContent }
+            first.setThemeMode(ThemeMode.DARK); first.setForceDarkContent(true); first.setGestureOnlyBack(true)
+            val written = first.state.first { it.themeMode == ThemeMode.DARK && it.forceDarkContent && it.gestureOnlyBack }
             assertTrue(written.forceDarkContent)
         } finally { owner.clear(); firstJob.cancelAndJoin() }
         val secondJob = SupervisorJob()
@@ -32,8 +32,9 @@ class SettingsPersistenceTest {
         val second = SettingsViewModel(app, secondStore)
         val secondOwner = ViewModelStore().apply { put("vm", second) }
         try {
-            val restored = second.state.first { it.themeMode == ThemeMode.DARK && it.forceDarkContent }
+            val restored = second.state.first { it.themeMode == ThemeMode.DARK && it.forceDarkContent && it.gestureOnlyBack }
             assertEquals(ThemeMode.DARK, restored.themeMode)
+            assertTrue(restored.gestureOnlyBack)
             second.setThemeMode(ThemeMode.SYSTEM)
             assertEquals(ThemeMode.SYSTEM, second.state.first { it.themeMode == ThemeMode.SYSTEM && it.forceDarkContent }.themeMode)
         } finally { secondOwner.clear(); secondJob.cancelAndJoin() }

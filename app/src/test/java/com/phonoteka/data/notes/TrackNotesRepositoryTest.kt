@@ -27,6 +27,25 @@ class TrackNotesRepositoryTest {
         assertEquals("unfinished", repo(root).draft(1)?.text)
         assertFalse(File(root, "notes").listFiles()!!.single().readText().contains("body"))
     }
+    @Test fun encryptedArchiveRestoresPhotosWhileJsonClearlyMarksOmission() = runTest {
+        val attachments = (1..4).map { number ->
+            NoteAttachment("photo$number", "photo$number.jpg", "image/jpeg",
+                AttachmentLimits.encodeBase64(byteArrayOf(number.toByte(), 9, 8, 7)))
+        }
+        val original = TrackNote(1, "Фото", "Текст", attachments = attachments)
+        val source = repo(temporary.newFolder())
+        source.save(original)
+
+        val json = String(source.export())
+        assertTrue(json.contains("\"attachmentsOmitted\":true"))
+        assertFalse(json.contains("photo1.jpg"))
+
+        val archive = source.exportArchive()
+        val restored = repo(temporary.newFolder())
+        assertEquals(1, restored.previewArchive(archive))
+        assertEquals(1, restored.importArchive(archive))
+        assertEquals(attachments, restored.list().single().note.attachments)
+    }
     @Test fun corruptedRevisionFallsBackToPreviousAuthenticatedRevision() = runTest {
         val root = temporary.newFolder()
         val first = TrackNote(1, "first", "text", updatedAt = 1000)

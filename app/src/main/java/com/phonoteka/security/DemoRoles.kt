@@ -5,19 +5,40 @@ import android.content.Context
 class DemoRoleSession(context: Context, val authority: MockRoleAuthority = MockRoleAuthority()) {
     private val prefs = context.getSharedPreferences("phonoteka_demo_role", Context.MODE_PRIVATE)
     @Volatile private var selected = DemoRole.EMPLOYEE
-    private var issued = authority.issue(selected)
+    /**
+     * Учебная идентичность пользователя. Меняется при смене роли или при явной
+     * смене пользователя — это делает смену пользователя НАБЛЮДАЕМОЙ:
+     * идентификатор попадает в канал WSS и в журнал, поэтому смена видна.
+     */
+    @Volatile private var actorId: String = DEFAULT_ACTOR
+    private var issued = authority.issue(selected, actorId)
     private val mutableRole = kotlinx.coroutines.flow.MutableStateFlow(selected)
     val changes: kotlinx.coroutines.flow.StateFlow<DemoRole> = mutableRole
     val role: DemoRole get() = selected
+    val currentActorId: String get() = actorId
     @get:Synchronized val session: DemoSession get() {
-        if (!authority.valid(issued)) issued = authority.issue(selected)
+        if (!authority.valid(issued)) issued = authority.issue(selected, actorId)
         return issued
     }
     @Synchronized fun select(role: DemoRole) {
         check(com.phonoteka.BuildConfig.DEBUG) { "Role selection is debug-only" }
-        selected = role; issued = authority.issue(role); mutableRole.value = role
+        selected = role; actorId = actorFor(role); issued = authority.issue(role, actorId); mutableRole.value = role
     }
-    @Synchronized fun resetToEmployee() { selected = DemoRole.EMPLOYEE; issued = authority.issue(selected); mutableRole.value = selected }
+    /**
+     * ЛР15: явная смена пользователя. Новый пользователь получает новую идентичность,
+     * поэтому привязанное к прежнему пользователю соединение обязано быть закрыто.
+     */
+    @Synchronized fun switchUser(nextActorId: String): Boolean {
+        check(com.phonoteka.BuildConfig.DEBUG) { "User switching is debug-only" }
+        if (!nextActorId.matches(Regex("[A-Za-z0-9:._-]{1,64}"))) return false
+        if (nextActorId == actorId) return false
+        actorId = nextActorId
+        issued = authority.issue(selected, actorId)
+        return true
+    }
+    @Synchronized fun resetToEmployee() {
+        selected = DemoRole.EMPLOYEE; actorId = DEFAULT_ACTOR; issued = authority.issue(selected, actorId); mutableRole.value = selected
+    }
     fun canAccess(scope: DemoScope) = authority.authorize(session, scope)
     fun recordPermissionPrompted() { prefs.edit().putBoolean("notifications_asked", true).apply() }
     fun hasPromptedNotifications() = prefs.getBoolean("notifications_asked", false)
@@ -27,6 +48,17 @@ class DemoRoleSession(context: Context, val authority: MockRoleAuthority = MockR
         audit.record(actor, resource, granted)
         if (!granted) throw SecurityException("Недостаточно прав для операции")
         return actor
+    }
+
+    companion object {
+        const val DEFAULT_ACTOR = "mock:student"
+        /** Учебные идентичности пользователей стенда. Никаких реальных учётных записей. */
+        val FIXTURE_ACTORS = listOf("mock:student", "mock:employee-2", "mock:security-3")
+        fun actorFor(role: DemoRole): String = when (role) {
+            DemoRole.EMPLOYEE -> "mock:student"
+            DemoRole.SECURITY -> "mock:security-3"
+            DemoRole.ADMIN -> "mock:employee-2"
+        }
     }
 }
 

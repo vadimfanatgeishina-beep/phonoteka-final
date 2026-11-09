@@ -19,6 +19,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -60,7 +64,12 @@ fun HomeScreen(
     onNavigateToList: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToTheme: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Единая Фонотека: разделы доступны прямо с главной, а не через меню настроек. */
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToCatalog: () -> Unit = {},
+    onNavigateToNotes: () -> Unit = {},
+    onNavigateToJournal: () -> Unit = {}
 ) {
     com.phonoteka.diagnostics.RecordRecomposition("HomeScreen")
     // BoxWithConstraints — адаптивная компоновка (Лаба 3):
@@ -108,12 +117,29 @@ fun HomeScreen(
         }
         val actions: @Composable (Modifier) -> Unit = { pane ->
             Column(modifier = pane, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                com.phonoteka.ui.components.BuildModeBadge(modifier = Modifier.padding(bottom = 4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    AppButton(Modifier.weight(1f).height(50.dp), "Настройки", onNavigateToSettings,
+                        AppButtonStyle.SECONDARY,
+                        leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) })
+                    AppButton(Modifier.weight(1f).height(50.dp).testTag("home-profile-button"), "Профиль", onNavigateToProfile,
+                        AppButtonStyle.SECONDARY,
+                        leadingContent = { Icon(Icons.Default.Person, contentDescription = null) })
+                }
                 AppButton(Modifier.fillMaxWidth().height(50.dp), "Перейти к списку треков", onNavigateToList,
                     AppButtonStyle.PRIMARY, AppButtonSize.LARGE,
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) })
-                AppButton(Modifier.fillMaxWidth().height(50.dp), "Настройки", onNavigateToSettings,
-                    AppButtonStyle.SECONDARY,
-                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    AppButton(Modifier.weight(1f), "Каталог", onNavigateToCatalog,
+                        AppButtonStyle.OUTLINED, AppButtonSize.SMALL,
+                        leadingContent = { Icon(Icons.Default.LibraryMusic, contentDescription = null) })
+                    AppButton(Modifier.weight(1f), "Заметки", onNavigateToNotes,
+                        AppButtonStyle.OUTLINED, AppButtonSize.SMALL,
+                        leadingContent = { Icon(Icons.Default.NoteAlt, contentDescription = null) })
+                    AppButton(Modifier.weight(1f), "Журнал", onNavigateToJournal,
+                        AppButtonStyle.OUTLINED, AppButtonSize.SMALL,
+                        leadingContent = { Icon(Icons.Default.Security, contentDescription = null) })
+                }
                 AppButton(Modifier.fillMaxWidth(), "Тема оформления", onNavigateToTheme,
                     AppButtonStyle.OUTLINED, AppButtonSize.SMALL,
                     leadingContent = { Icon(Icons.Default.Palette, contentDescription = null) })

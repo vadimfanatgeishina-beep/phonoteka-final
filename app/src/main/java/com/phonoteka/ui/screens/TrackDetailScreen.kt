@@ -66,6 +66,7 @@ import com.phonoteka.data.TrackCandidate
 import com.phonoteka.data.TrackStatus
 import com.phonoteka.ui.components.StatusBadge
 import com.phonoteka.ui.components.StatusText
+import com.phonoteka.ui.LocalSettings
 import com.phonoteka.viewmodel.DetailUiState
 import com.phonoteka.viewmodel.OperationProgress
 import com.phonoteka.viewmodel.TrackDetailViewModel
@@ -95,6 +96,7 @@ fun TrackDetailScreen(
     val error by viewModel.error.collectAsState()
     val operation by viewModel.operation.collectAsState()
     val candidates by viewModel.candidates.collectAsState()
+    val settings = LocalSettings.current
 
     val audioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -108,9 +110,7 @@ fun TrackDetailScreen(
             TopAppBar(
                 title = { Text("Детали трека") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         }
@@ -146,7 +146,12 @@ fun TrackDetailScreen(
                 isAttaching = isAttaching,
                 operation = operation,
                 error = error,
-                onSearch = { viewModel.searchTrack("both") },
+                onSearch = {
+                    if (settings.autoDownload) viewModel.searchAndDownload("both")
+                    else viewModel.searchTrack("both")
+                },
+                searchButtonLabel = if (settings.autoDownload) "Найти и скачать автоматически" else "Только поиск кандидатов",
+                showExplicitBadge = settings.showExplicitBadge,
                 onSearchAndDownload = { viewModel.searchAndDownload("both") },
                 onDownload = { viewModel.downloadTrack() },
                 onCancelDownload = { viewModel.cancelDownload() },
@@ -192,6 +197,8 @@ internal fun DetailContent(
     onPickAudio: () -> Unit,
     onPlay: () -> Unit,
     onDismissError: () -> Unit,
+    searchButtonLabel: String = "Только поиск кандидатов",
+    showExplicitBadge: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val playable = track.isLocallyPlayable()
@@ -331,7 +338,7 @@ internal fun DetailContent(
                     ) {
                         Icon(Icons.Default.Search, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Только поиск кандидатов")
+                        Text(searchButtonLabel)
                     }
 
                     if (track.status == TrackStatus.READY || candidates.isNotEmpty()) {
@@ -379,6 +386,7 @@ internal fun DetailContent(
                         CandidateRow(
                             candidate = candidate,
                             isSelected = track.selectedCandidateId == candidate.videoId,
+                            showExplicitBadge = showExplicitBadge,
                             onClick = { onSelectCandidate(candidate.videoId) }
                         )
                     }
@@ -463,6 +471,7 @@ internal fun DetailContent(
 private fun CandidateRow(
     candidate: TrackCandidate,
     isSelected: Boolean,
+    showExplicitBadge: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -487,6 +496,10 @@ private fun CandidateRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (showExplicitBadge && candidate.isExplicit) {
+                Text("EXPLICIT", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error)
+            }
         }
         Text(
             text = "${candidate.score}%",

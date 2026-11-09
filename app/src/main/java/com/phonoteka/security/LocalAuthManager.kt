@@ -11,11 +11,16 @@ import javax.crypto.KeyGenerator
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import javax.crypto.Cipher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 enum class PinResult { SUCCESS, INVALID, LOCKED, NOT_CONFIGURED }
 
 /** Local-only authentication for the student demo. PIN and recovery code are never stored as plaintext. */
-class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryNotifier = MockRecoveryOutbox.shared) {
+class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryNotifier = MockRecoveryOutbox.shared,
+    /** Сводный журнал ЛР13–16: только факт события, без PIN/OTP/кода восстановления. */
+    private val unifiedAudit: UnifiedAuditLog? = null) {
     @Volatile var lastRecoveryNotices: List<RecoveryNotice> = emptyList(); private set
     private val prefs = context.getSharedPreferences("phonoteka_auth", Context.MODE_PRIVATE)
     private val keyAlias = "phonoteka.local-auth.hmac.v1"
@@ -25,9 +30,17 @@ class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryN
     @Synchronized private fun markAuthenticated() {
         authenticationVersion = Math.addExact(authenticationVersion, 1L)
         lastAuthenticationElapsed = android.os.SystemClock.elapsedRealtime()
+        _authState.value = AuthenticationSnapshot(authenticationVersion, lastAuthenticationElapsed)
     }
     private val auditSigner = AndroidKeystoreAuditExport()
     private val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+    /**
+     * Наблюдаемое состояние локальной аутентификации.
+     * Профиль и журнал показывают, активна ли сессия, без запроса PIN или кода.
+     */
+    private val _authState = MutableStateFlow(AuthenticationSnapshot(0L, null))
+    val authenticationSnapshotFlow: StateFlow<AuthenticationSnapshot> = _authState.asStateFlow()
 
     val isConfigured: Boolean get() = prefs.contains("pin_mac")
     val lockoutUntil: Long get() = prefs.getLong("lockout_until", 0L)
@@ -75,10 +88,23 @@ class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryN
     fun recover(recoveryCode: String, newPin: String): String? {
         require(newPin.matches(Regex("\\d{4,6}"))) { "PIN должен содержать от 4 до 6 цифр" }
         val expected = prefs.getString("recovery_mac", null) ?: return null
-        val actual = runCatching { mac("recovery:${recoveryCode.uppercase().replace("-", "").trim()}") }.getOrNull() ?: return null
+        val normalized = recoveryCode.uppercase().replace("-", "").trim()
+        val actual = runCatching { mac("recovery:$normalized") }.getOrNull() ?: return null
         if (!MessageDigest.isEqual(expected.toByteArray(), actual.toByteArray())) {
             recordAudit("recovery_failed")
             return null
+        }
+        // ЛР13: одноразовость кода восстановления. В защищённой сборке использованный
+        // код помечается и повторно не принимается. В учебной уязвимой сборке код
+        // можно применить повторно — это и есть демонстрируемая ошибка.
+        if (SecurityDecisions.otpSingleUse()) {
+            val used = prefs.getString("used_recovery_macs", "") ?: ""
+            if (used.split(';').any { it.isNotEmpty() && MessageDigest.isEqual(it.toByteArray(), actual.toByteArray()) }) {
+                recordAudit("recovery_replay_denied")
+                return null
+            }
+            val updated = (used.split(';').filter { it.isNotEmpty() } + actual).takeLast(10).joinToString(";")
+            prefs.edit().putString("used_recovery_macs", updated).commit().also { check(it) }
         }
         val newRecovery = newRecoveryCode()
         prefs.edit().putString("pin_mac", mac("pin:$newPin"))
@@ -100,17 +126,57 @@ class LocalAuthManager(context: Context, private val recoveryNotifier: RecoveryN
         markAuthenticated()
     }
 
-    @Synchronized fun lock() { lastAuthenticationElapsed = null; runCatching { recordAudit("local_session_locked") } }
+    @Synchronized fun lock() {
+        lastAuthenticationElapsed = null
+        _authState.value = AuthenticationSnapshot(authenticationVersion, null)
+        runCatching { recordAudit("local_session_locked") }
+    }
     @Synchronized fun remainingFreshMillis(now: Long = android.os.SystemClock.elapsedRealtime()): Long =
         lastAuthenticationElapsed?.let { (5 * 60_000L - (now - it)).coerceIn(0, 5 * 60_000L) } ?: 0L
     @Synchronized fun isFreshAuthentication(now: Long = android.os.SystemClock.elapsedRealtime()): Boolean =
         lastAuthenticationElapsed?.let { now - it in 0 until (5 * 60_000L) } ?: false
+    /** UI session remains open; sensitive library operations still use the shorter fresh-auth window. */
+    @Synchronized fun remainingSessionMillis(now: Long = android.os.SystemClock.elapsedRealtime()): Long =
+        lastAuthenticationElapsed?.let { (30 * 60_000L - (now - it)).coerceIn(0, 30 * 60_000L) } ?: 0L
+    @Synchronized fun isSessionActive(now: Long = android.os.SystemClock.elapsedRealtime()): Boolean =
+        remainingSessionMillis(now) > 0L
 
     @Synchronized fun recordAudit(event: String) {
         val rows = auditEntries().takeLast(99)
         val safe = event.take(80).replace(Regex("[|\\r\\n]"), "/")
         val authenticated = String(auditSigner.encode(rows + "${System.currentTimeMillis()}|$safe"), Charsets.UTF_8)
         check(prefs.edit().putString("audit_authenticated_v2", authenticated).remove("audit").commit())
+        writeUnified(event)
+    }
+
+    /**
+     * Дублирует событие в единый журнал ЛР13–16.
+     * В журнал уходит ТОЛЬКО имя события: PIN, OTP, код восстановления и токены не пишутся.
+     */
+    private fun writeUnified(event: String) {
+        val log = unifiedAudit ?: return
+        val type = when {
+            event.startsWith("pin_success") || event.startsWith("biometric_refresh_restored") -> AuditEventType.LOGIN
+            event.startsWith("pin_failed") || event.startsWith("biometric_not_recognized") -> AuditEventType.LOGIN_FAILED
+            event.startsWith("pin_lockout") -> AuditEventType.LOCK
+            event.startsWith("pin_setup") -> AuditEventType.PIN_SET
+            event.startsWith("recovery_success") -> AuditEventType.RECOVERY
+            event.startsWith("recovery_failed") -> AuditEventType.LOGIN_FAILED
+            event.startsWith("local_session_locked") -> AuditEventType.LOCK
+            event.startsWith("biometric_cancel") -> AuditEventType.LOGIN_FAILED
+            else -> AuditEventType.SESSION
+        }
+        val source = if (event.startsWith("recovery")) AuditSource.RECOVERY else AuditSource.AUTH
+        val result = if (event.contains("failed") || event.contains("not_recognized")) "DENIED" else "OK"
+        log.record(
+            type = type,
+            source = source,
+            userId = "local-user",
+            role = "EMPLOYEE",
+            action = event.take(80),
+            subject = "local_auth",
+            result = result
+        )
     }
     @Synchronized fun auditEntries(): List<String> {
         val document = prefs.getString("audit_authenticated_v2", null) ?: return emptyList()

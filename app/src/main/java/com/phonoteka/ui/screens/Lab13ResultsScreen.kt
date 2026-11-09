@@ -58,7 +58,7 @@ fun Lab13ResultsScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
         Text("Обычные заказы", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         SensitiveResultsGate.ordinaryOrders.forEach { Text(it, modifier = Modifier.testTag("ordinaryOrder")) }
         Text("Результаты", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })

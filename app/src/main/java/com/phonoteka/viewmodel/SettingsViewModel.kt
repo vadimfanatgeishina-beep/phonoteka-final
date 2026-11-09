@@ -26,6 +26,7 @@ import java.io.IOException
 data class SettingsState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val forceDarkContent: Boolean = false,
+    val gestureOnlyBack: Boolean = false,
     val showHints: Boolean = true,          // Показывать подсказки (Лаба 4: чекбокс)
     val autoDownload: Boolean = false,      // Автоскачивание после поиска (Лаба 4: чекбокс)
     val showExplicitBadge: Boolean = true   // Показывать бейдж explicit (Лаба 4: чекбокс)
@@ -43,6 +44,7 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
 private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
 private val FORCE_DARK_CONTENT_KEY = booleanPreferencesKey("force_dark_content")
+private val GESTURE_ONLY_BACK_KEY = booleanPreferencesKey("gesture_only_back")
 private val SHOW_HINTS_KEY = booleanPreferencesKey("show_hints")
 private val AUTO_DOWNLOAD_KEY = booleanPreferencesKey("auto_download")
 private val SHOW_EXPLICIT_BADGE_KEY = booleanPreferencesKey("show_explicit_badge")
@@ -54,8 +56,14 @@ private val SHOW_EXPLICIT_BADGE_KEY = booleanPreferencesKey("show_explicit_badge
  * Скачивание из интернета в приложении отсутствует, поэтому настроек
  * источников/загрузки здесь нет.
  */
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-    private val store: DataStore<Preferences> = application.applicationContext.settingsDataStore
+class SettingsViewModel(
+    application: Application,
+    testDataStore: DataStore<Preferences>? = null
+) : AndroidViewModel(application) {
+    /** Required by AndroidViewModelFactory used by the legacy app entry point. */
+    constructor(application: Application) : this(application, null)
+
+    private val store: DataStore<Preferences> = testDataStore ?: application.applicationContext.settingsDataStore
 
 
     val state: StateFlow<SettingsState> = store.data
@@ -72,6 +80,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     ThemeMode.entries.firstOrNull { it.name == stored }
                 } ?: if (prefs[DARK_MODE_KEY] == true) ThemeMode.DARK else ThemeMode.SYSTEM,
                 forceDarkContent = prefs[FORCE_DARK_CONTENT_KEY] ?: false,
+                gestureOnlyBack = prefs[GESTURE_ONLY_BACK_KEY] ?: false,
                 showHints = prefs[SHOW_HINTS_KEY] ?: true,
                 autoDownload = prefs[AUTO_DOWNLOAD_KEY] ?: false,
                 showExplicitBadge = prefs[SHOW_EXPLICIT_BADGE_KEY] ?: true
@@ -101,6 +110,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 prefs[FORCE_DARK_CONTENT_KEY] = enabled
             }
         }
+    }
+
+    fun setGestureOnlyBack(enabled: Boolean) {
+        viewModelScope.launch { store.edit { it[GESTURE_ONLY_BACK_KEY] = enabled } }
     }
 
     fun setShowHints(enabled: Boolean) {

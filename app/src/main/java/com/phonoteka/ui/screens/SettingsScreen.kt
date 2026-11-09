@@ -1,5 +1,13 @@
 package com.phonoteka.ui.screens
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -28,25 +36,35 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.phonoteka.viewmodel.SettingsViewModel
 import com.phonoteka.viewmodel.ThemeMode
 
 /**
  * Экран настроек с вложенной навигацией (Лаба 6).
- * Показывает список категорий: Общие, Уведомления, Тема.
+ * Показывает профиль и категории настроек.
  * Каждая категория — отдельный подэкран.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onNavigateToSubScreen: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -56,9 +74,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Настройки") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         }
@@ -71,12 +87,12 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            SettingsCategoryItem(icon = Icons.Default.Person, title = "Мой профиль",
+                subtitle = "Аватар, ник, описание и статистика библиотеки",
+                onClick = { onNavigateToSubScreen("settings/profile") })
             if (com.phonoteka.BuildConfig.DEBUG) androidx.compose.material3.TextButton(onClick = { onNavigateToSubScreen("settings/lab9-measure") }) { Text("ЛР9 · окно измерения") }
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    SettingsCategoryItem(icon = Icons.Default.Tune, title = "Мой профиль · ЛР8",
-                        subtitle = "Дизайн-система, форма, тема", onClick = { onNavigateToSubScreen("settings/profile") })
-                    HorizontalDivider()
                     SettingsCategoryItem(icon = Icons.Default.Tune, title = "Трекер задач · ЛР9",
                         subtitle = "60 задач, анимации, эффекты, автосохранение", onClick = { onNavigateToSubScreen("settings/tasks") })
                     HorizontalDivider()
@@ -94,8 +110,15 @@ fun SettingsScreen(
                     SettingsCategoryItem(
                         icon = Icons.Default.Tune,
                         title = "Общие",
-                        subtitle = "Тёмная тема, автоскачивание, подсказки",
+                        subtitle = "Навигация, автоскачивание и подсказки",
                         onClick = { onNavigateToSubScreen("settings/general") }
+                    )
+                    HorizontalDivider()
+                    SettingsCategoryItem(
+                        icon = Icons.Default.Tune,
+                        title = "Тема оформления",
+                        subtitle = "Системная, светлая или тёмная тема",
+                        onClick = { onNavigateToSubScreen("settings/theme") }
                     )
                     HorizontalDivider()
                     SettingsCategoryItem(
@@ -103,13 +126,6 @@ fun SettingsScreen(
                         title = "Уведомления",
                         subtitle = "Управление уведомлениями",
                         onClick = { onNavigateToSubScreen("settings/notifications") }
-                    )
-                    HorizontalDivider()
-                    SettingsCategoryItem(
-                        icon = Icons.Default.Palette,
-                        title = "Тема",
-                        subtitle = "Тёмная / светлая тема",
-                        onClick = { onNavigateToSubScreen("settings/theme") }
                     )
                     HorizontalDivider()
                     SettingsCategoryItem(
@@ -197,9 +213,7 @@ fun GeneralSettingsScreen(
             TopAppBar(
                 title = { Text("Общие") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         }
@@ -212,40 +226,15 @@ fun GeneralSettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Режим темы", style = MaterialTheme.typography.titleSmall)
-            ThemeMode.entries.forEach { mode ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.setThemeMode(mode) },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = state.themeMode == mode,
-                        onClick = { viewModel.setThemeMode(mode) }
-                    )
-                    Text(
-                        text = when (mode) {
-                            ThemeMode.SYSTEM -> "Системная"
-                            ThemeMode.LIGHT -> "Светлая"
-                            ThemeMode.DARK -> "Тёмная"
-                        }
-                    )
-                }
-            }
-            SettingRow(
-                title = "Принудительно тёмная тема",
-                subtitle = "Тёмные поверхности при любом режиме"
-            ) {
-                Switch(
-                    checked = state.forceDarkContent,
-                    onCheckedChange = viewModel::setForceDarkContent
-                )
-            }
-
-            HorizontalDivider()
-
             Text("Дополнительно", style = MaterialTheme.typography.titleSmall)
+
+            SettingRow(
+                title = "Возврат жестом",
+                subtitle = "Слева — кнопка «Назад» сверху. Справа — кнопка скрыта, используйте системный жест Android."
+            ) {
+                Switch(checked = state.gestureOnlyBack, onCheckedChange = viewModel::setGestureOnlyBack,
+                    modifier = Modifier.testTag("gesture-only-back"))
+            }
 
             // Чекбоксы (Лаба 4)
             SettingRow(title = "Показывать подсказки", subtitle = "Вспомогательные тексты в интерфейсе") {
@@ -254,7 +243,7 @@ fun GeneralSettingsScreen(
             SettingRow(title = "Автоскачивание", subtitle = "Скачивать после поиска автоматически") {
                 Checkbox(checked = state.autoDownload, onCheckedChange = { viewModel.setAutoDownload(it) })
             }
-            SettingRow(title = "Бейдж explicit", subtitle = "Показывать метку Explicit на треках") {
+            SettingRow(title = "Метка Explicit", subtitle = "Показывать пометку у найденных кандидатов") {
                 Checkbox(checked = state.showExplicitBadge, onCheckedChange = { viewModel.setShowExplicitBadge(it) })
             }
         }
@@ -264,18 +253,40 @@ fun GeneralSettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsSettingsScreen(
-    viewModel: SettingsViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var notificationsGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { notificationsGranted = it }
+
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsGranted = Build.VERSION.SDK_INT < 33 ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Уведомления") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         }
@@ -289,11 +300,40 @@ fun NotificationsSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("Уведомления воспроизведения", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Уведомления в разработке",
-                style = MaterialTheme.typography.bodyLarge,
+                "Android показывает медиа-уведомление, пока играет музыка. Разрешение можно включить здесь; звук и библиотека работают и без него.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        when {
+                            Build.VERSION.SDK_INT < 33 -> "Отдельное разрешение не требуется на Android ${Build.VERSION.SDK_INT}."
+                            notificationsGranted -> "Разрешение на уведомления включено."
+                            else -> "Разрешение на уведомления выключено."
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.testTag("notification-permission-status")
+                    )
+                    if (Build.VERSION.SDK_INT >= 33 && !notificationsGranted) {
+                        androidx.compose.material3.Button(
+                            onClick = { permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                            modifier = Modifier.fillMaxWidth().testTag("notification-permission-request")
+                        ) { Text("Разрешить уведомления") }
+                        TextButton(onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                            )
+                        }, modifier = Modifier.testTag("notification-open-system-settings")) {
+                            Text("Открыть настройки Android")
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -312,9 +352,7 @@ fun ThemeSettingsScreen(
             TopAppBar(
                 title = { Text("Тема оформления") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         }

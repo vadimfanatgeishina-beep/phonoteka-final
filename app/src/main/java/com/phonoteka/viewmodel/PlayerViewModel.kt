@@ -3,6 +3,7 @@ package com.phonoteka.viewmodel
 import android.app.Application
 import android.content.ComponentName
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -30,6 +31,7 @@ data class PlayerUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val hasNext: Boolean = false,
+    val hasPrevious: Boolean = false,
     val isConnected: Boolean = false,
     val error: String? = null
 )
@@ -46,6 +48,24 @@ fun Track.isLocallyPlayable(): Boolean {
     return false
 }
 
+/**
+ * Builds a URI ExoPlayer can actually open.
+ *
+ * `Uri.parse("/storage/.../track.mp3")` yields a schemeless URI, which Media3
+ * rejects — the downloaded file appears in the library but cannot be played.
+ * Absolute paths must become `file://` URIs; SAF `content://` URIs are kept as is.
+ */
+internal fun localFileUri(filePath: String?): Uri {
+    val path = filePath.orEmpty()
+    return when {
+        path.startsWith("content://") -> Uri.parse(path)
+        path.startsWith("file://") -> Uri.parse(path)
+        path.startsWith("/") -> Uri.fromFile(java.io.File(path))
+        path.isBlank() -> Uri.EMPTY
+        else -> Uri.parse(path)
+    }
+}
+
 /** Stable catalogue order; the selected entry always uses its latest binding. */
 internal fun localPlaybackQueue(selected: Track, catalogue: List<Track>): List<Track> {
     if (!selected.isLocallyPlayable()) return emptyList()
@@ -59,6 +79,7 @@ internal fun sessionTrack(mediaId: String, artist: String?, title: String?, uri:
     val id = mediaId.toLongOrNull()?.takeIf { it > 0 } ?: return null
     val validUri = uri?.takeIf { path ->
         (path.startsWith("content://") && path.length > "content://".length) ||
+        (path.startsWith("file://") && path.length > "file://".length) ||
         path.startsWith("/")
     }
     return Track(
@@ -109,7 +130,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
             buildController(token)
         } catch (e: Exception) {
-            _uiState.update { it.copy(error = "Сервис воспроизведения недоступен. Нажмите «повторить» в плеере.") }
+            Log.e(TAG, "Could not create playback session token", e)
+            _uiState.update { it.copy(error = e.message?.let { "Плеер: $it" } ?: "Не удалось запустить плеер") }
         }
     }
 
@@ -126,6 +148,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 override fun onDisconnected(controller: MediaController) {
                     if (released) return
                     pollingJob?.cancel()
+                    this@PlayerViewModel.thisControllerDisconnected(controller)
                     _uiState.update {
                         it.copy(isConnected = false, isPlaying = false,
                             error = "Связь с плеером потеряна. Откройте приложение заново.")
@@ -142,7 +165,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     syncState(connected)
                     startPolling()
                 } catch (e: Exception) {
-                    _uiState.update { it.copy(error = e.message ?: "Не удалось подключиться к плееру") }
+                    Log.e(TAG, "Could not connect to playback session", e)
+                    controllerFuture = null
+                    _uiState.update { it.copy(isConnected = false, error = e.cause?.message ?: e.message ?: "Не удалось подключиться к плееру") }
                 }
             }
         }, ContextCompat.getMainExecutor(app))
@@ -156,7 +181,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 isPlaying = player.isPlaying,
                 positionMs = player.currentPosition.coerceAtLeast(0),
                 durationMs = player.duration.coerceAtLeast(0),
-                hasNext = player.hasNextMediaItem()
+                hasNext = player.hasNextMediaItem(),
+                hasPrevious = player.hasPreviousMediaItem()
             )
         }
     }
@@ -209,6 +235,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (current.hasNextMediaItem()) current.seekToNextMediaItem()
     }
 
+    fun previous() = withController { current ->
+        if (current.hasPreviousMediaItem()) current.seekToPreviousMediaItem()
+        else if (current.currentMediaItem != null) current.seekTo(0L)
+    }
+
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
     private inline fun withController(action: (MediaController) -> Unit) {
@@ -220,6 +251,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         try { action(current) } catch (e: Exception) {
             _uiState.update { it.copy(error = e.message ?: "Ошибка воспроизведения") }
         }
+    }
+
+    private fun thisControllerDisconnected(disconnected: MediaController) {
+        if (controller === disconnected) controller = null
+        controllerFuture = null
     }
 
     /** Idempotent: release the future once, including connections completing after onCleared. */
@@ -240,8 +276,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         super.onCleared()
     }
 
+    private companion object { const val TAG = "PhonotekaPlayer" }
+
     private fun Track.toMediaItem(): MediaItem {
-        val uri = Uri.parse(requireNotNull(filePath))
+        val uri = localFileUri(filePath)
         return MediaItem.Builder()
             .setMediaId(id.toString())
             .setUri(uri)

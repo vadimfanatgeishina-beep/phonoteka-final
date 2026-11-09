@@ -1,78 +1,63 @@
 package com.phonoteka.ui
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.phonoteka.ui.components.ButtonState
-import com.phonoteka.ui.components.StatusButton
-import com.phonoteka.ui.screens.ProfileActions
-import com.phonoteka.ui.screens.ProfileScreenContent
+import androidx.compose.ui.test.performTextReplacement
+import com.phonoteka.ui.screens.ProfileScreen
 import com.phonoteka.ui.screens.ProfileStats
-import com.phonoteka.ui.screens.ProfileWidthClass
 import com.phonoteka.ui.theme.PhonotekaTheme
-import com.phonoteka.viewmodel.ProfileUiState
-import com.phonoteka.viewmodel.ThemeMode
+import com.phonoteka.viewmodel.ProfileData
+import com.phonoteka.viewmodel.ProfileStore
+import com.phonoteka.viewmodel.ProfileViewModel
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** ЛР8, задание 3: ERROR-кнопка, смена темы меняет цвета, Expanded ≠ Compact. */
+private class MemoryProfileStore : ProfileStore {
+    var saved = ProfileData()
+    override suspend fun read() = saved
+    override suspend fun write(data: ProfileData) { saved = data }
+}
+
 class ProfileScreenTest {
     @get:Rule val compose = createComposeRule()
-    private val noActions = ProfileActions({}, {}, {}, {}, {}, {}, {}, {})
 
-    @Test fun errorStatusButtonAnnouncesErrorAndStaysClickable() {
-        var clicks = 0
-        compose.setContent { PhonotekaTheme { StatusButton(text = "Повторить", state = ButtonState.ERROR, onClick = { clicks++ }) } }
-        compose.onNodeWithTag("status-button")
-            .assert(SemanticsMatcher("описание содержит ошибку") { node ->
-                val desc = node.config.getOrElse(SemanticsProperties.StateDescription) { "" } +
-                    node.config.getOrElse(SemanticsProperties.ContentDescription) { emptyList() }.joinToString()
-                desc.contains("Ошибка", ignoreCase = true)
-            })
-            .performClick()
-        assertEquals(1, clicks)
-    }
-
-    @Test fun themeSwitchChangesColors() {
-        var mode by mutableStateOf(ThemeMode.LIGHT)
-        var background = Color.Unspecified
+    @Test fun viewAndEditorAreSeparateAndSavePersistsNickname() {
+        val store = MemoryProfileStore()
+        val model = ProfileViewModel(store)
         compose.setContent {
-            PhonotekaTheme(themeMode = mode) {
-                background = MaterialTheme.colorScheme.background
-                ProfileScreenContent(ProfileUiState(loaded = true), ProfileStats(1, 0, 0), mode, false,
-                    ProfileActions({}, {}, {}, {}, {}, {}, { mode = it }, {}), ProfileWidthClass.COMPACT)
+            PhonotekaTheme {
+                ProfileScreen(model, ProfileStats(7, 4, 1), "ADMIN", true, onBack = {})
             }
         }
-        compose.waitForIdle()
-        val light = background
-        compose.onNodeWithText("Тёмная").performClick()
-        compose.waitForIdle()
-        assertEquals(ThemeMode.DARK, mode)
-        assertNotEquals(light, background)
+        compose.onNodeWithTag("profileEdit").assertExists()
+        compose.onNodeWithTag("profileName").assertDoesNotExist()
+        compose.onNodeWithText("Главный администратор").assertExists()
+        compose.onNodeWithText("Скачано").assertExists()
+
+        compose.onNodeWithTag("profileEdit").performClick()
+        compose.onNodeWithTag("profileName").performTextReplacement("Михаил")
+        compose.onNodeWithTag("profileSave").performClick()
+        compose.waitUntil(5_000) { store.saved.name == "Михаил" }
+        compose.onNodeWithTag("profileEdit").assertExists()
+        compose.onNodeWithText("Михаил").assertExists()
+        assertEquals("Михаил", store.saved.name)
     }
 
-    @Test fun expandedHasTwoColumnsCompactHasOne() {
-        var wc by mutableStateOf(ProfileWidthClass.COMPACT)
+    @Test fun cancelDoesNotPersistDraft() {
+        val store = MemoryProfileStore()
+        val model = ProfileViewModel(store)
         compose.setContent {
-            PhonotekaTheme(themeMode = ThemeMode.LIGHT) {
-                ProfileScreenContent(ProfileUiState(loaded = true), ProfileStats(1, 0, 0), ThemeMode.LIGHT, false, noActions, wc)
+            PhonotekaTheme {
+                ProfileScreen(model, ProfileStats(0, 0, 0), "EMPLOYEE", true, onBack = {})
             }
         }
-        assertEquals(1, compose.onAllNodes(hasTestTag("profileColumn")).fetchSemanticsNodes().size)
-        wc = ProfileWidthClass.EXPANDED
-        compose.waitForIdle()
-        assertEquals(2, compose.onAllNodes(hasTestTag("profileColumn")).fetchSemanticsNodes().size)
+        compose.onNodeWithTag("profileEdit").performClick()
+        compose.onNodeWithTag("profileName").performTextReplacement("Временное имя")
+        compose.onNodeWithTag("profileCancel").performClick()
+        compose.onNodeWithText(ProfileData.DEFAULT_NAME).assertExists()
+        assertEquals(ProfileData.DEFAULT_NAME, store.saved.name)
     }
 }

@@ -21,7 +21,9 @@ import kotlinx.coroutines.launch
 @Immutable
 data class ProfileData(
     val name: String = DEFAULT_NAME,
-    val bio: String = ""
+    val bio: String = "",
+    val personalRole: String = "Меломан",
+    val avatarFile: String = ""
 ) {
     companion object { const val DEFAULT_NAME = "Слушатель Фонотеки" }
 }
@@ -34,6 +36,7 @@ data class ProfileUiState(
     val draft: ProfileData = ProfileData(),
     val loaded: Boolean = false,
     val status: ProfileSaveStatus = ProfileSaveStatus.IDLE,
+    val celebrationTick: Int = 0,
     val message: String? = null
 ) {
     val nameError: String? get() = when {
@@ -44,7 +47,7 @@ data class ProfileUiState(
     val bioWarning: String? get() =
         if (draft.bio.length > BIO_WARN) "Длинное описание: ${draft.bio.length}/$MAX_BIO" else null
     val dirty: Boolean get() = draft != saved
-    val canSave: Boolean get() = loaded && dirty && nameError == null && draft.bio.length <= MAX_BIO &&
+    val canSave: Boolean get() = loaded && dirty && nameError == null && draft.bio.length <= MAX_BIO && draft.personalRole.length <= 40 &&
         status != ProfileSaveStatus.SAVING
 
     companion object { const val MAX_NAME = 40; const val BIO_WARN = 100; const val MAX_BIO = 140 }
@@ -58,15 +61,19 @@ interface ProfileStore {
 private val Context.profileDataStore: DataStore<Preferences> by preferencesDataStore(name = "phonoteka_profile")
 private val NAME_KEY = stringPreferencesKey("name")
 private val BIO_KEY = stringPreferencesKey("bio")
+private val PERSONAL_ROLE_KEY = stringPreferencesKey("personal_role")
+private val AVATAR_KEY = stringPreferencesKey("avatar_file")
 
 /** DataStore сам выполняет IO на фоновом диспетчере. Данные переживают перезапуск. */
 class DataStoreProfileStore(private val store: DataStore<Preferences>) : ProfileStore {
     override suspend fun read(): ProfileData {
         val p = store.data.first()
-        return ProfileData(name = p[NAME_KEY] ?: ProfileData.DEFAULT_NAME, bio = p[BIO_KEY] ?: "")
+        return ProfileData(name = p[NAME_KEY] ?: ProfileData.DEFAULT_NAME, bio = p[BIO_KEY] ?: "",
+            personalRole = p[PERSONAL_ROLE_KEY] ?: "Меломан", avatarFile = p[AVATAR_KEY] ?: "")
     }
     override suspend fun write(data: ProfileData) {
-        store.edit { it[NAME_KEY] = data.name; it[BIO_KEY] = data.bio }
+        store.edit { it[NAME_KEY] = data.name; it[BIO_KEY] = data.bio;
+            it[PERSONAL_ROLE_KEY] = data.personalRole; it[AVATAR_KEY] = data.avatarFile }
     }
     companion object { fun from(context: Context) = DataStoreProfileStore(context.applicationContext.profileDataStore) }
 }
@@ -84,16 +91,20 @@ class ProfileViewModel(private val store: ProfileStore) : ViewModel() {
 
     fun onNameChange(value: String) = _state.update { it.copy(draft = it.draft.copy(name = value.take(ProfileUiState.MAX_NAME + 10)), status = ProfileSaveStatus.IDLE) }
     fun onBioChange(value: String) = _state.update { it.copy(draft = it.draft.copy(bio = value.take(ProfileUiState.MAX_BIO)), status = ProfileSaveStatus.IDLE) }
+    fun onRoleChange(value: String) = _state.update { it.copy(draft = it.draft.copy(personalRole = value.take(40)), status = ProfileSaveStatus.IDLE) }
+    fun onAvatarChange(value: String) = _state.update { it.copy(draft = it.draft.copy(avatarFile = value), status = ProfileSaveStatus.IDLE) }
 
     fun save() {
         val current = _state.value
         if (!current.canSave) return
-        val toWrite = current.draft.copy(name = current.draft.name.trim(), bio = current.draft.bio.trim())
+        val toWrite = current.draft.copy(name = current.draft.name.trim(), bio = current.draft.bio.trim(),
+            personalRole = current.draft.personalRole.trim())
         _state.update { it.copy(status = ProfileSaveStatus.SAVING, message = null) }
         viewModelScope.launch {
             val result = runCatching { store.write(toWrite) }
             _state.update {
-                if (result.isSuccess) it.copy(saved = toWrite, draft = toWrite, status = ProfileSaveStatus.SAVED, message = "Изменения сохранены")
+                if (result.isSuccess) it.copy(saved = toWrite, draft = toWrite, status = ProfileSaveStatus.SAVED,
+                    celebrationTick = it.celebrationTick + 1, message = "Изменения сохранены")
                 else it.copy(status = ProfileSaveStatus.ERROR, message = "Ошибка сохранения: повторите действие")
             }
         }

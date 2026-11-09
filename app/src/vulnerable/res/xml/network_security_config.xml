@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Уязвимая (учебная) сборка: намеренно ослабленная сетевая политика, чтобы на стенде
+  было видно, ЧТО именно ломается при перехвате трафика.
+    - cleartext разрешён (можно показать HTTP-использование);
+    - доверяются пользовательские CA (нужен mitmproxy/Charles для демонстрации MITM);
+    - SPKI-пины НЕ объявлены, поэтому подменённый сертификат принимается системой.
+  Только фиктивные локальные данные. Реальные учётные записи и секреты сюда не попадают.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -10,6 +10,7 @@ import com.phonoteka.security.AndroidKeystoreRefreshTokenStore
 import com.phonoteka.security.LocalMockAuthEndpoint
 import com.phonoteka.security.MockSessionRepository
 import com.phonoteka.security.PreferencesMockAuthStateStore
+import com.phonoteka.security.SecurityDecisions
 import com.phonoteka.data.notes.*
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -23,7 +24,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 class PhonotekaApp : Application() {
 
     val database: PhonotekaDatabase by lazy { PhonotekaDatabase.get(this) }
-    val localAuth by lazy { com.phonoteka.security.LocalAuthManager(this) }
+    val localAuth by lazy { com.phonoteka.security.LocalAuthManager(this, com.phonoteka.security.MockRecoveryOutbox.shared, unifiedAudit) }
+    val totpAuthenticator by lazy { com.phonoteka.security.TotpAuthenticatorManager(this, localAuth) }
     val riskStepUp by lazy { com.phonoteka.security.RiskStepUpController(android.os.SystemClock::elapsedRealtime) }
     @Volatile private var elevatedAfterBackground = false
     fun markRiskyResume() { elevatedAfterBackground = true; riskStepUp.invalidate() }
@@ -33,24 +35,72 @@ class PhonotekaApp : Application() {
     /** ЛР15: блокировка/выход закрывают живой сокет, привязанный к прежнему пользователю. */
     val principalChanges = com.phonoteka.security.PrincipalChangeSignal()
     fun invalidateProtectedSession() { clearStepUpSession(); inviteAuthority.revokeAll(); principalChanges.signal() }
+
+    /**
+     * Единый журнал событий ЛР13/14/15/16.
+     * Пишутся в него входы и отказы (ЛР13), QR и решения доступа (ЛР14),
+     * сетевые события и WSS (ЛР15), результаты проверок hardening (ЛР16).
+     */
+    val unifiedAudit by lazy { com.phonoteka.security.UnifiedAuditLog(this) }
+
+    /** Идентификатор текущей сессии пользователя — общий для всех источников событий. */
+    fun currentSessionId(): String {
+        val existing = unifiedAudit.sessionId
+        if (existing != null) return existing
+        val fresh = "sess-" + java.util.UUID.randomUUID().toString().take(8)
+        unifiedAudit.sessionId = fresh
+        return fresh
+    }
+
+    fun auditEvent(
+        type: com.phonoteka.security.AuditEventType,
+        source: com.phonoteka.security.AuditSource,
+        action: String,
+        obj: String,
+        result: String,
+        reason: String? = null,
+        includeIp: Boolean = false
+    ) {
+        val actor = runCatching { roleSession.authority.auditActor(roleSession.session) }.getOrNull()
+        unifiedAudit.record(
+            type = type,
+            source = source,
+            userId = actor?.id ?: "unverified",
+            role = actor?.role ?: "UNVERIFIED",
+            action = action,
+            subject = obj,
+            result = result,
+            reason = reason,
+            includeIp = includeIp
+        )
+    }
+
     fun requireAuthority(scope: com.phonoteka.security.DemoScope, resource: String) {
-        if (!localAuth.isFreshAuthentication()) {
+        // ЛР13/ЛР15: в уязвимой сборке эти проверки ослаблены намеренно (см. SecurityDecisions),
+        // поэтому различие между сборками видно в ОДНОМ и том же сценарии.
+        if (SecurityDecisions.requireFreshAuthForLibrary() && !localAuth.isFreshAuthentication()) {
             accessAudit.recordUnauthenticated("$resource.authentication")
+            auditEvent(com.phonoteka.security.AuditEventType.ACCESS_DENIED, com.phonoteka.security.AuditSource.AUTH,
+                resource, "authentication", "DENIED", reason = "Нет свежей аутентификации")
             throw SecurityException("Fresh local authentication required")
         }
         val actor = roleSession.requireAccess(scope, "$resource.role", accessAudit)
-        com.phonoteka.security.BiometricStepUpOperation.fromResource(resource)?.let { operation ->
-            try { auditStepUp.gate.consume(operation, localAuth.authenticationSnapshot().version) }
-            catch (denied: SecurityException) { accessAudit.record(actor, "$resource.biometric", false); throw denied }
-        }
-        val risk = com.phonoteka.security.StepUpRisk(android.os.Debug.isDebuggerConnected(), elevatedAfterBackground)
-        try {
-            riskStepUp.require(com.phonoteka.security.ProtectedOperation.fromResource(resource), localAuth.authenticationSnapshot(), risk)
-        } catch (denied: SecurityException) {
-            accessAudit.record(actor, "$resource.stepup", false)
-            throw denied
+        if (SecurityDecisions.requireStepUp()) {
+            com.phonoteka.security.BiometricStepUpOperation.fromResource(resource)?.let { operation ->
+                try { auditStepUp.gate.consume(operation, localAuth.authenticationSnapshot().version) }
+                catch (denied: SecurityException) { accessAudit.record(actor, "$resource.biometric", false); throw denied }
+            }
+            val risk = com.phonoteka.security.StepUpRisk(android.os.Debug.isDebuggerConnected(), elevatedAfterBackground)
+            try {
+                riskStepUp.require(com.phonoteka.security.ProtectedOperation.fromResource(resource), localAuth.authenticationSnapshot(), risk)
+            } catch (denied: SecurityException) {
+                accessAudit.record(actor, "$resource.stepup", false)
+                throw denied
+            }
         }
         accessAudit.record(actor, resource, true)
+        auditEvent(com.phonoteka.security.AuditEventType.ACCESS_ALLOWED, com.phonoteka.security.AuditSource.AUDIT,
+            resource, scope.wire, "ALLOWED")
     }
     val roleSession by lazy { com.phonoteka.security.DemoRoleSession(this) }
     val accessAudit by lazy { com.phonoteka.security.AccessAuditRepository(this, roleSession.authority,
@@ -96,6 +146,7 @@ class PhonotekaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.phonoteka.security.SecurityProfile.initialize(this)
         // Импорт musik.txt выполнится в TrackListViewModel.init
     }
 }

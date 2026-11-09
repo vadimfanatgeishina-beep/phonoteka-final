@@ -34,6 +34,8 @@ class FakeTrackLibrary(initial: List<Track> = emptyList()) : TrackLibrary {
 
     /** When set, [importLocalFiles] throws it instead of returning [localImportReport]. */
     var localImportFailure: Exception? = null
+    var searchFailure: Exception? = null
+    var searchCalls: Int = 0
 
     /** When > 0, [importLocalFiles] suspends for this long so tests can hold the call in flight. */
     var localImportDelayMs: Long = 0
@@ -74,6 +76,8 @@ class FakeTrackLibrary(initial: List<Track> = emptyList()) : TrackLibrary {
         MutableStateFlow(candidatesMap[trackId] ?: emptyList())
 
     override suspend fun searchTrack(trackId: Long, source: String): List<TrackCandidate> {
+        searchCalls++
+        searchFailure?.let { throw it }
         // Simulate: move track to READY status
         val list = tracks.value.toMutableList()
         val idx = list.indexOfFirst { it.id == trackId }

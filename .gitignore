@@ -14,3 +14,6 @@ google-services.json
 /work/gitlab-push-phonoteka/
 /lab_reports/source_text/
 **/deploy_ed25519
+# Local conversation and account handoff notes are not project sources.
+/PHONOTEKA_CHAT_EXPORT.md
+/HANDOFF_NEW_CODEX_ACCOUNT.md

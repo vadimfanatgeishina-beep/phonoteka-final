@@ -2,6 +2,7 @@ package com.phonoteka.network
 
 import com.phonoteka.data.Track
 import com.phonoteka.data.TrackCandidate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.NewPipe
@@ -10,6 +11,10 @@ import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
+import java.io.IOException
+
+class MusicSourcesUnavailableException(cause: Throwable) :
+    IOException("Музыкальные источники недоступны. Проверьте интернет и повторите поиск.", cause)
 
 /**
  * Поиск треков на YouTube и SoundCloud через NewPipeExtractor.
@@ -35,6 +40,8 @@ class StreamSearcher {
     suspend fun search(track: Track, source: String = "both"): List<TrackCandidate> = withContext(Dispatchers.IO) {
         val query = buildQuery(track)
         val results = mutableListOf<TrackCandidate>()
+        var completedSources = 0
+        var firstFailure: Exception? = null
 
         val sources = when (source) {
             "youtube" -> listOf(ServiceList.YouTube)
@@ -46,14 +53,21 @@ class StreamSearcher {
             try {
                 val queryHandler = svc.searchQHFactory.fromQuery(query)
                 val info = SearchInfo.getInfo(svc, queryHandler)
+                completedSources++
                 for (item in info.relatedItems) {
                     if (item !is StreamInfoItem || item.streamType == StreamType.LIVE_STREAM) continue
                     val candidate = item.toCandidate(track, svc.serviceInfo.name.lowercase())
                     if (candidate != null) results.add(candidate)
                 }
-            } catch (_: Exception) {
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
                 // Один источник может упасть — продолжаем с другим.
+                if (firstFailure == null) firstFailure = failure
             }
+        }
+        if (completedSources == 0 && firstFailure != null) {
+            throw MusicSourcesUnavailableException(firstFailure)
         }
         results.distinctBy { it.videoId }.sortedByDescending { it.score }
     }

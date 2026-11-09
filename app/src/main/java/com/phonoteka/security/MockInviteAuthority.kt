@@ -9,7 +9,13 @@ enum class InviteFailure { DENIED, INVALID, EXPIRED, REPLAY, CAPACITY }
 class InviteException(val failure: InviteFailure) : SecurityException("Owned invitation rejected: $failure")
 /** Same-process, owned mock only. Elapsed-time expiry, digest ledger, signature and one-use consume. */
 class MockInviteAuthority(private val authority: MockRoleAuthority, private val mac: InviteMac,
-    private val now: () -> Long, private val ttl: Long = 300_000, private val capacity: Int = 1000) {
+    private val now: () -> Long, private val ttl: Long = 300_000, private val capacity: Int = 1000,
+    /**
+     * ЛР14: одноразовость билета. В защищённой сборке билет сгорает после первого
+     * сканирования; в учебной уязвимой сборке повторное сканирование разрешено —
+     * именно это и демонстрируется на стенде.
+     */
+    private val singleUse: Boolean? = null) {
     private data class Entry(val trackId: Long, val expires: Long)
     private val issued = mutableMapOf<String, Entry>()
     init { require(ttl in 1..300_000 && capacity > 0) }
@@ -45,7 +51,8 @@ class MockInviteAuthority(private val authority: MockRoleAuthority, private val 
         val key = digest(fields[1].toByteArray(Charsets.UTF_8))
         val entry = issued[key] ?: throw InviteException(InviteFailure.REPLAY)
         if (entry.trackId != trackId || entry.expires != expires) throw InviteException(InviteFailure.INVALID)
-        issued.remove(key) // Signature and authoritative record verified BEFORE consume.
+        // Одноразовость: в защищённой сборке запись удаляется, в уязвимой — остаётся.
+        if (singleUse ?: SecurityDecisions.qrTicketSingleUse()) issued.remove(key)
         prune(time)
         return ScannedTrackInvite(trackId)
     }

@@ -61,7 +61,7 @@ import com.phonoteka.viewmodel.TrackInviteViewModel
     Column(Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Приглашение к треку · ЛР14", style = MaterialTheme.typography.titleLarge)
         Text("Только собственный локальный стенд. QR подписан AndroidKeyStore, одноразовый и живёт не более пяти минут. После перезапуска процесса не принимается.")
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
         if (DemoScope.INVITE_CREATE in scopes) {
             OutlinedTextField(id, { id = it.filter(Char::isDigit).take(18) }, label = { Text("ID существующего трека") }, modifier = Modifier.testTag("invite-track-id"))
             Button(enabled = !state.busy && id.toLongOrNull()?.let { it > 0 } == true,

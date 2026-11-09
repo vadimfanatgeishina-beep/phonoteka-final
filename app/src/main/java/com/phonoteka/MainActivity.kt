@@ -12,6 +12,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +47,7 @@ import com.phonoteka.viewmodel.SettingsViewModel
 class MainActivity : FragmentActivity() {
     private lateinit var authManager: LocalAuthManager
     private var sessionUnlocked by mutableStateOf(false)
+    private var sessionNotice by mutableStateOf<String?>(null)
     private var backgroundAt = 0L
     private lateinit var biometricFlow: BiometricSessionFlow
     private var biometricPrompt: BiometricPrompt? = null
@@ -68,14 +73,22 @@ class MainActivity : FragmentActivity() {
             val settingsViewModel: SettingsViewModel = viewModel()
             val playerViewModel: PlayerViewModel = viewModel()
             val settings by settingsViewModel.state.collectAsState()
+            val navigationState = rememberSaveableStateHolder()
+            var navigationEpoch by rememberSaveable { mutableIntStateOf(0) }
 
             SideEffect {
                 window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
             LaunchedEffect(sessionUnlocked) {
                 while (sessionUnlocked) {
-                    val remaining = authManager.remainingFreshMillis()
-                    if (remaining == 0L) { authManager.lock(); app.lab13MockSession.forgetAccessSession(); biometricSaved = app.biometricRefresh.hasSavedRefresh(); sessionUnlocked = false; break }
+                    val remaining = authManager.remainingSessionMillis()
+                    if (remaining == 0L) {
+                        authManager.lock(); app.lab13MockSession.forgetAccessSession()
+                        biometricSaved = app.biometricRefresh.hasSavedRefresh()
+                        sessionNotice = "Сессия истекла. Войдите снова — затем вернётесь к прежнему экрану."
+                        sessionUnlocked = false
+                        break
+                    }
                     kotlinx.coroutines.delay(remaining)
                 }
             }
@@ -84,18 +97,23 @@ class MainActivity : FragmentActivity() {
                 themeMode = settings.themeMode,
                 forceDarkContent = settings.forceDarkContent
             ) {
-                androidx.compose.material3.Surface {
-                    if (sessionUnlocked && authManager.isFreshAuthentication()) {
-                        Navigation(
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.phonoteka.ui.components.LocalEmbeddedBackVisible provides !settings.gestureOnlyBack
+                ) { androidx.compose.material3.Surface {
+                    if (sessionUnlocked && authManager.isSessionActive()) {
+                        navigationState.SaveableStateProvider("navigation-$navigationEpoch") { Navigation(
                             repository = app.repository,
                             settingsViewModel = settingsViewModel,
                             playerViewModel = playerViewModel,
                             authManager = authManager,
                             onLock = {
-                                authManager.lock(); app.lab13MockSession.forgetAccessSession(); app.invalidateProtectedSession(); app.roleSession.resetToEmployee(); sessionUnlocked = false
+                                authManager.lock(); app.lab13MockSession.forgetAccessSession(); app.invalidateProtectedSession(); app.roleSession.resetToEmployee()
+                                navigationEpoch++
+                                sessionNotice = null
+                                sessionUnlocked = false
                                 biometricSaved = app.biometricRefresh.hasSavedRefresh()
                             }
-                        )
+                        ) }
                     } else {
                         sessionUnlocked = false
                         val biometricAvailable = BiometricManager.from(this@MainActivity)
@@ -103,18 +121,18 @@ class MainActivity : FragmentActivity() {
                         AuthGateScreen(
                             auth = authManager,
                             repository = app.lab13MockSession,
+                            authenticator = app.totpAuthenticator,
                             biometricAvailable = biometricAvailable,
                             onBiometric = { showBiometricPrompt(BiometricSessionAction.RESTORE) },
-                            onUnlock = {
-                                sessionUnlocked = true
-                                if (biometricAvailable && !app.biometricRefresh.hasSavedRefresh()) showBiometricPrompt(BiometricSessionAction.ENROLL)
-                            },
+                            onEnrollBiometric = { showBiometricPrompt(BiometricSessionAction.ENROLL) },
+                            onUnlock = { sessionNotice = null; sessionUnlocked = true },
                             biometricSaved = biometricSaved,
                             biometricBusy = biometricBusy,
-                            biometricMessage = biometricMessage
+                            biometricMessage = biometricMessage ?: sessionNotice,
+                            resumeAfterExpiry = sessionNotice != null
                         )
                     }
-                }
+                } }
             }
         }
     }
@@ -137,10 +155,11 @@ class MainActivity : FragmentActivity() {
         if (backgroundAt != 0L && android.os.SystemClock.elapsedRealtime() - backgroundAt >= 60_000L) {
             (application as PhonotekaApp).markRiskyResume()
         }
-        if (backgroundAt != 0L && android.os.SystemClock.elapsedRealtime() - backgroundAt >= 5 * 60_000L) {
+        if (backgroundAt != 0L && android.os.SystemClock.elapsedRealtime() - backgroundAt >= 30 * 60_000L) {
             authManager.lock()
             (application as PhonotekaApp).lab13MockSession.forgetAccessSession()
             biometricSaved = (application as PhonotekaApp).biometricRefresh.hasSavedRefresh()
+            sessionNotice = "Сессия истекла. Войдите снова — затем вернётесь к прежнему экрану."
             sessionUnlocked = false
         }
         backgroundAt = 0L
@@ -148,16 +167,23 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        super.onStop()
+    }
+
+    override fun onDestroy() {
         foregroundEpoch++
         biometricFlow.cancel()
         biometricPrompt?.cancelAuthentication()
         biometricTicket = null; biometricBusy = false
-        super.onStop()
+        super.onDestroy()
     }
 
     private fun showBiometricPrompt(action: BiometricSessionAction) {
         if (biometricBusy || isFinishing || isDestroyed) return
-        if (action == BiometricSessionAction.ENROLL && !authManager.isFreshAuthentication()) return
+        if (action == BiometricSessionAction.ENROLL && !authManager.isFreshAuthentication()) {
+            biometricMessage = "Сессия истекла. Введи PIN перед настройкой отпечатка."
+            return
+        }
         val app = application as PhonotekaApp
         val epoch = foregroundEpoch
         biometricMessage = null

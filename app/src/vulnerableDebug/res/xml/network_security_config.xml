@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  УЯЗВИМАЯ сборка, debug-вариант стенда.
+  Намеренно ослабленная сетевая политика — чтобы на стенде было видно, ЧТО ломается при перехвате:
+    - cleartext разрешён;
+    - доверяются пользовательские CA (нужен установленный mitmproxy/Charles);
+    - SPKI-пины объявлены ТОЛЬКО для собственного локального стенда localhost.
+  Пинов для внешних хостов нет, поэтому подменённый сертификат внешнего сервиса системой принимается.
+  Только фиктивные локальные данные; реальные учётные записи и секреты сюда не попадают.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">localhost</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+            <certificates src="@raw/local_mock_cert" />
+            <certificates src="@raw/local_mock_backup_cert" />
+        </trust-anchors>
+        <pin-set expiration="2036-01-01">
+            <pin digest="SHA-256">Oh8QdZbm/OhYPqVjT8cCppyT+TONXWQUYlAmAPXcGGc=</pin>
+            <pin digest="SHA-256">E8OZRSghu3t1p/Z5p2yP7Oa6gMgV7U8EVBGIyiXVWQw=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

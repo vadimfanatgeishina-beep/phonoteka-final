@@ -30,13 +30,13 @@ public final class LocalLab15WssServer {
             while (true) {
                 SSLSocket socket = (SSLSocket) listener.accept();
                 try {
-                    workers.execute(() -> { try (socket) { handle(socket, key); } catch (Exception ignored) { System.out.println("Local WSS connection rejected"); } });
+                    workers.execute(() -> { try (socket) { handle(socket, key); } catch (Exception failure) { System.out.println("Local WSS connection rejected: " + failure.getClass().getSimpleName() + " " + failure.getMessage()); } });
                 } catch (RejectedExecutionException full) { socket.close(); }
             }
         } finally { listener.close(); workers.shutdownNow(); }
     }
     private static void handle(SSLSocket socket, String key) throws Exception {
-        socket.setSoTimeout(10000);
+        socket.setSoTimeout(120000);
         InputStream in = socket.getInputStream(); OutputStream out = socket.getOutputStream();
         ByteArrayOutputStream headers = new ByteArrayOutputStream();
         int b; String text = "";
@@ -98,20 +98,21 @@ public final class LocalLab15WssServer {
     static synchronized String verifyTicket(String key, String ticket, String channel, long now) throws Exception {
         if (ticket == null || ticket.length() > 512) return null;
         String[] p = ticket.split("\\.", -1);
-        if (p.length != 6 || !"v1".equals(p[0])) return null;
+        if (p.length != 6 || !"v1".equals(p[0])) { System.out.println("Ticket: malformed parts"); return null; }
         String user;
-        try { user = new String(Base64.getUrlDecoder().decode(p[1]), StandardCharsets.UTF_8); } catch (IllegalArgumentException bad) { return null; }
+        try { user = new String(Base64.getUrlDecoder().decode(p[1]), StandardCharsets.UTF_8); } catch (IllegalArgumentException bad) { System.out.println("Ticket: bad user encoding"); return null; }
         if (!user.matches("[A-Za-z0-9_.-]{1,64}") || !p[2].matches("0|[1-9][0-9]{0,17}") || !p[3].matches("[0-9]{1,18}") ||
-            !p[4].matches("[A-Za-z0-9_-]{16,64}") || !p[5].matches("[a-fA-F0-9]{64}")) return null;
+            !p[4].matches("[A-Za-z0-9_-]{16,64}") || !p[5].matches("[a-fA-F0-9]{64}")) { System.out.println("Ticket: malformed fields"); return null; }
         long expires = Long.parseLong(p[3]);
         String canonical = String.join("\n", "LAB15-TICKET", "v1", user, p[2], channel, p[3], p[4]);
         if (!MessageDigest.isEqual(hmac(derive(key, "lab15/ticket-key/v1"), canonical).getBytes(StandardCharsets.US_ASCII),
-                p[5].toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII))) return null;
-        if (!channel.startsWith("/lab15/u/" + userTag(user) + "/")) return null;
-        if (now > expires || expires - now > 30) return null;
+                p[5].toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII))) { System.out.println("Ticket: bad signature"); return null; }
+        if (!channel.startsWith("/lab15/u/" + userTag(user) + "/")) { System.out.println("Ticket: channel mismatch"); return null; }
+        // Up to five seconds of phone/host clock skew; ticket remains single-use.
+        if (now > expires + 5 || expires - now > 35) { System.out.println("Ticket: expired"); return null; }
         NONCES.entrySet().removeIf(e -> now > e.getValue());
         String nonceKey = "ticket:" + p[4];
-        if (NONCES.containsKey(nonceKey) || NONCES.size() >= 50000) return null;
+        if (NONCES.containsKey(nonceKey) || NONCES.size() >= 50000) { System.out.println("Ticket: replay"); return null; }
         NONCES.put(nonceKey, expires);
         return user;
     }

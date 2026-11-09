@@ -4,15 +4,22 @@ import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.security.keystore.UserNotAuthenticatedException
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.phonoteka.security.*
@@ -21,12 +28,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 
 /** Mock password -> system Keystore authentication -> local PIN setup/login/recovery. */
 @Composable
 fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
-    biometricAvailable: Boolean, onBiometric: () -> Unit, onUnlock: () -> Unit,
-    biometricSaved: Boolean = false, biometricBusy: Boolean = false, biometricMessage: String? = null) {
+    authenticator: TotpAuthenticatorManager, biometricAvailable: Boolean,
+    onBiometric: () -> Unit, onEnrollBiometric: () -> Unit, onUnlock: () -> Unit,
+    biometricSaved: Boolean = false, biometricBusy: Boolean = false, biometricMessage: String? = null,
+    resumeAfterExpiry: Boolean = false) {
     val context = LocalContext.current
     val keyguard = remember { context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager }
     val scope = rememberCoroutineScope()
@@ -37,10 +48,26 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
     var recovery by remember { mutableStateOf("") }
     var receipt by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var authenticatorSecret by remember { mutableStateOf("") }
+    var authenticatorCode by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var lockUntil by remember { mutableStateOf(0L) }
     var seconds by remember { mutableStateOf(0L) }
     var pending by remember { mutableStateOf<(suspend () -> Unit)?>(null) }
+    fun navigateBack() {
+        if (busy) { message = "Подожди окончания проверки."; return }
+        page = when (page) {
+            "authenticator_setup" -> "security_setup"
+            "authenticator_code", "recovery" -> "login"
+            "security_setup" -> if (auth.isConfigured) "login" else "setup"
+            "setup" -> "mock"
+            else -> "login"
+        }
+        message = null
+    }
+    BackHandler(enabled = page in setOf("authenticator_setup", "authenticator_code", "recovery", "security_setup", "setup")) {
+        navigateBack()
+    }
     val systemPrompt = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val action = pending; pending = null
         if (result.resultCode != Activity.RESULT_OK || action == null) {
@@ -69,8 +96,9 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
             } finally { if (pending == null) busy = false }
         }
     }
-    LaunchedEffect(repository) {
-        if (biometricSaved && auth.isConfigured) page = "resume"
+    LaunchedEffect(repository, resumeAfterExpiry) {
+        if (resumeAfterExpiry && auth.isConfigured) page = if (biometricSaved) "resume" else "login"
+        else if (biometricSaved && auth.isConfigured) page = "resume"
         else perform {
             val token = withContext(Dispatchers.IO) { repository.accessToken() }
             page = if (token == null) "mock" else if (auth.isConfigured) "login" else "setup"
@@ -95,13 +123,79 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
         }
     }
     Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (page in setOf("authenticator_setup", "authenticator_code", "recovery", "security_setup", "setup")) {
+            com.phonoteka.ui.components.AppBackIconButton(::navigateBack)
+        }
         Text("Phonoteka · учебный вход", style = MaterialTheme.typography.headlineMedium)
         Text("Только локальная фикстура. Не вводите реальные учётные данные.")
         when {
             receipt != null -> {
                 Text("Сохраните одноразовый recovery-код; повторного показа не будет.")
                 Text(receipt!!)
-                Button(enabled = !busy && !biometricBusy, onClick = { receipt = null; onUnlock() }) { Text("Я сохранил код") }
+                Button(enabled = !busy && !biometricBusy, onClick = { receipt = null; page = "security_setup" }) { Text("Продолжить настройку защиты") }
+            }
+            page == "security_setup" -> {
+                Text("Добавьте второй способ входа: Authenticator, отпечаток пальца или продолжите без дополнительной настройки.",
+                    style = MaterialTheme.typography.bodyLarge)
+                if (authenticator.isEnabled()) {
+                    Text("Authenticator уже подключён. При следующем входе по PIN потребуется шестизначный код.")
+                } else {
+                    Button(enabled = !busy && !biometricBusy, onClick = {
+                        perform {
+                            authenticatorSecret = withContext(Dispatchers.IO) { authenticator.beginEnrollment() }
+                            authenticatorCode = ""
+                            page = "authenticator_setup"
+                        }
+                    }) { Text("Подключить Authenticator") }
+                }
+                if (biometricAvailable && !biometricSaved) {
+                    OutlinedButton(enabled = !busy && !biometricBusy, onClick = {
+                        if (auth.isFreshAuthentication()) onEnrollBiometric()
+                        else { page = "login"; message = "Сессия истекла. Введи PIN перед настройкой отпечатка." }
+                    }) {
+                        Text("Настроить отпечаток пальца")
+                    }
+                } else if (biometricSaved) Text("Биометрический вход уже настроен.")
+                Button(enabled = !busy && !biometricBusy, onClick = {
+                    if (auth.isFreshAuthentication()) onUnlock()
+                    else { page = "login"; message = "Сессия истекла. Введи PIN, чтобы продолжить." }
+                }) { Text("Продолжить в Фонотеку") }
+            }
+            page == "authenticator_setup" -> {
+                Text("В Authenticator выбери добавление аккаунта по QR-коду. Если сканирование недоступно, скопируй ключ настройки ниже.")
+                if (authenticatorSecret.isNotBlank()) AuthenticatorQr(authenticator.provisioningUri(authenticatorSecret))
+                Text("Аккаунт: Phonoteka · ЛР13", style = MaterialTheme.typography.titleSmall)
+                Text(authenticatorSecret, style = MaterialTheme.typography.bodyMedium)
+                val clipboard = LocalClipboardManager.current
+                OutlinedButton(onClick = { clipboard.setText(AnnotatedString(authenticatorSecret)) }) {
+                    Text("Скопировать ключ настройки")
+                }
+                Text("После добавления аккаунта введи текущий шестизначный код из Authenticator. Код обновляется раз в 60 секунд.")
+                OutlinedTextField(authenticatorCode, { authenticatorCode = it.filter(Char::isDigit).take(6) },
+                    label = { Text("Шестизначный код") }, singleLine = true)
+                Button(enabled = !busy && !biometricBusy && authenticatorCode.length == 6, onClick = {
+                    val code = authenticatorCode; authenticatorCode = ""
+                    perform {
+                        val confirmed = withContext(Dispatchers.IO) { authenticator.confirmEnrollment(code) }
+                        if (confirmed) {
+                            authenticatorSecret = ""
+                            page = "security_setup"
+                            message = "Authenticator подключён. При входе по PIN приложение запросит одноразовый код."
+                        } else message = "Код не подошёл. Проверь, что в Authenticator добавлен ключ с этого экрана и выбран период 60 секунд; затем дождись нового кода."
+                    }
+                }) { Text("Проверить и подключить") }
+            }
+            page == "authenticator_code" -> {
+                Text("Введи шестизначный одноразовый код из Authenticator.")
+                OutlinedTextField(authenticatorCode, { authenticatorCode = it.filter(Char::isDigit).take(6) },
+                    label = { Text("Код Authenticator") }, singleLine = true)
+                Button(enabled = !busy && !biometricBusy && authenticatorCode.length == 6, onClick = {
+                    val code = authenticatorCode; authenticatorCode = ""
+                    perform {
+                        if (withContext(Dispatchers.IO) { authenticator.verifyAndConsume(code) }) onUnlock()
+                        else message = "Код неверен, уже использован или истёк. Возьми новый код из Authenticator."
+                    }
+                }) { Text("Подтвердить код") }
             }
             page == "resume" -> {
                 Text("Сохранённая учебная сессия: биометрия расшифрует refresh token и проверит его в локальном mock endpoint.")
@@ -109,7 +203,7 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
                 OutlinedButton(enabled = !busy && !biometricBusy, onClick = {
                     perform {
                         val token = withContext(Dispatchers.IO) { repository.accessToken() }
-                        page = if (token == null) "mock" else "login"
+                        page = if (token == null && !resumeAfterExpiry) "mock" else "login"
                     }
                 }) { Text("Системная аутентификация + PIN") }
                 TextButton(enabled = !busy && !biometricBusy, onClick = { page = "mock" }) { Text("Новый учебный вход") }
@@ -138,7 +232,7 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
                     val submitted = pin; pin = ""
                     perform {
                         when (withContext(Dispatchers.IO) { auth.verifyPin(submitted) }) {
-                            PinResult.SUCCESS -> onUnlock()
+                            PinResult.SUCCESS -> if (authenticator.isEnabled()) page = "authenticator_code" else onUnlock()
                             PinResult.LOCKED -> message = "PIN заблокирован; дождитесь окончания блокировки."
                             PinResult.INVALID -> message = "Неверный PIN"
                             PinResult.NOT_CONFIGURED -> page = "setup"
@@ -169,7 +263,6 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
                         } else showLoginResult(result) {}
                     }
                 }) { Text("Восстановить") }
-                TextButton(onClick = { page = "login" }) { Text("Назад") }
             }
         }
         if (seconds > 0) Text("Повтор через $seconds с.")
@@ -181,4 +274,17 @@ fun AuthGateScreen(auth: LocalAuthManager, repository: MockSessionRepository,
 @Composable private fun PinField(label: String, value: String, onValue: (String) -> Unit) {
     OutlinedTextField(value, { if (it.length <= 6 && it.all(Char::isDigit)) onValue(it) }, label = { Text(label) },
         visualTransformation = PasswordVisualTransformation(), singleLine = true)
+}
+
+@Composable private fun AuthenticatorQr(uri: String) {
+    val bitmap = remember(uri) {
+        val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, 480, 480)
+        Bitmap.createBitmap(480, 480, Bitmap.Config.ARGB_8888).apply {
+            for (y in 0 until 480) for (x in 0 until 480) {
+                setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+    }
+    Image(bitmap.asImageBitmap(), contentDescription = "QR-код настройки Authenticator",
+        modifier = Modifier.size(220.dp))
 }

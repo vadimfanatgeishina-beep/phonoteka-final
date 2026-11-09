@@ -81,7 +81,7 @@ fun Lab11BackupScreen(repository: PhonotekaRepository, onBack: () -> Unit, onNot
         }
     }
     Scaffold(topBar = { TopAppBar(title = { Text("Резервная копия · ЛР11") }, navigationIcon = {
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
     }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Экспорт и восстановление каталога треков и кандидатов в JSON.", style = MaterialTheme.typography.bodyLarge)

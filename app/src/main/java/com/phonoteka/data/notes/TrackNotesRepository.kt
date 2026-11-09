@@ -16,7 +16,10 @@ import okio.ByteString.Companion.decodeBase64
 import java.util.UUID
 
 /** updatedAt=0 means unknown legacy time, never an invented historical timestamp. */
-data class TrackNote(val id: Long, val title: String, val text: String, val pinned: Boolean = false, val updatedAt: Long = 0)
+data class TrackNote(val id: Long, val title: String, val text: String, val pinned: Boolean = false,
+    val updatedAt: Long = 0,
+    /** ЛР11: вложения (картинки) заметки. Хранятся вместе с телом в зашифрованной ревизии. */
+    val attachments: List<NoteAttachment> = emptyList())
 data class NoteRead(val note: TrackNote, val recovered: Boolean = false, val damaged: Boolean = false)
 data class TrashNote(val item: NoteRead, val deletedAt: Long)
 data class IntegritySummary(val checked: Int, val recovered: Int, val damaged: Int)
@@ -46,7 +49,11 @@ interface TrackNotes {
     suspend fun restore(id: Long)
     suspend fun purgeTrash()
     suspend fun export(): ByteArray
+    /** ЛР11: обычный JSON-экспорт БЕЗ вложений. Картинки восстанавливаются только из архива. */
+    suspend fun exportArchive(): ByteArray = throw NoteException(NoteError.InvalidInput)
     suspend fun importDocument(document: ByteArray)
+    /** ЛР11: импорт зашифрованного архива — восстанавливает заметки ВМЕСТЕ с вложениями. */
+    suspend fun importArchive(document: ByteArray): Int = throw NoteException(NoteError.InvalidInput)
     suspend fun saveDraft(note: TrackNote)
     suspend fun draft(id: Long): TrackNote?
     suspend fun clearDraft(id: Long)
@@ -54,6 +61,8 @@ interface TrackNotes {
     // Default seams are for older component test fakes; production implementations override all.
     suspend fun trash(): List<TrashNote> = emptyList()
     suspend fun previewImport(document: ByteArray): Int = throw NoteException(NoteError.InvalidInput)
+    /** ЛР11: проверка архива БЕЗ импорта — повреждённый архив падает здесь. */
+    suspend fun previewArchive(document: ByteArray): Int = throw NoteException(NoteError.InvalidInput)
     suspend fun checkIntegrity(progress: (Int, Int) -> Unit): IntegritySummary = throw NoteException(NoteError.InvalidInput)
     suspend fun removeCorrupted(id: Long): Unit = throw NoteException(NoteError.InvalidInput)
     suspend fun emptyTrashAfterConfirmation(): Unit = throw NoteException(NoteError.InvalidInput)
@@ -73,7 +82,9 @@ class FileTrackNotesRepository(
     private data class Entry(val current: Revision, val previous: Revision? = null, val deletedAt: Long? = null, val updatedAt: Long = 0)
     private data class Catalog(val version: Int = 2, val active: Map<String, Entry> = emptyMap(), val trash: Map<String, Entry> = emptyMap())
     private data class Envelope(val payload: String, val mac: String)
-    private data class Export(val schemaVersion: Int, val exportedAt: Long, val notes: List<TrackNote>)
+    private data class Export(val schemaVersion: Int, val exportedAt: Long, val notes: List<TrackNote>,
+        /** ЛР11: в обычном JSON-экспорте картинок нет — флаг делает это явным для импорта. */
+        val attachmentsOmitted: Boolean = false)
     private val gson = Gson()
     private val mutex = Mutex()
     private fun b64(bytes: ByteArray) = bytes.toByteString().base64()
@@ -81,6 +92,7 @@ class FileTrackNotesRepository(
     private fun checked(note: TrackNote, allowEmpty: Boolean = false): TrackNote {
         if (note.id <= 0 || note.updatedAt < 0 || note.title.length > 1000 || note.text.length > 100_000 ||
             (!allowEmpty && note.title.isBlank() && note.text.isBlank())) throw NoteException(NoteError.InvalidInput)
+        AttachmentLimits.validate(note.attachments)
         return note
     }
     private fun bounded(file: File): ByteArray {
@@ -249,14 +261,48 @@ class FileTrackNotesRepository(
         removeDraftFile(id); collectOrphans(); integrityEvent(id, "removed_damaged")
     }
     override suspend fun export(): ByteArray = io {
+        var omittedAttachments = false
         val notes = load().active.map { (id, e) ->
             val item = readEntry(id.toLong(), e)
             if (item.damaged) throw NoteException(NoteError.Corrupted) // Never silently omit a broken note.
-            item.note
+            // ЛР11: обычный JSON — без картинок. Это объявлено флагом attachmentsOmitted.
+            if (item.note.attachments.isNotEmpty()) omittedAttachments = true
+            item.note.copy(attachments = emptyList())
         }
-        gson.toJson(Export(2, now(), notes)).toByteArray(Charsets.UTF_8).also {
+        gson.toJson(Export(2, now(), notes, attachmentsOmitted = omittedAttachments))
+            .toByteArray(Charsets.UTF_8).also {
             if (it.size > MAX_BYTES) throw NoteException(NoteError.TooLarge)
         }
+    }
+
+    /** ЛР11: зашифрованный архив — единственный формат, который сохраняет вложения. */
+    override suspend fun exportArchive(): ByteArray = io {
+        val notes = load().active.map { (id, e) ->
+            val item = readEntry(id.toLong(), e)
+            if (item.damaged) throw NoteException(NoteError.Corrupted)
+            item.note
+        }
+        NoteArchiveCodec(crypto).encode(notes)
+    }
+
+    /** ЛР11: импорт архива восстанавливает заметки вместе с вложенными картинками. */
+    override suspend fun importArchive(document: ByteArray): Int = io {
+        val notes = NoteArchiveCodec(crypto).decode(document)
+        if (notes.size > MAX_NOTES) throw NoteException(NoteError.TooLarge)
+        for (note in notes) if (!exists(note.id)) throw NoteException(NoteError.InvalidInput)
+        val catalog = load()
+        val replacement = notes.associate { note ->
+            val old = catalog.active[note.id.toString()]
+            val previous = old?.let { entry ->
+                val read = readEntry(note.id, entry)
+                if (read.damaged) null else if (read.recovered) entry.previous else entry.current
+            }
+            note.id.toString() to Entry(revision(note), previous?.let { backupRevision(note.id, it) }, updatedAt = note.updatedAt)
+        }
+        commit(catalog.copy(active = replacement, trash = catalog.trash - replacement.keys))
+        notes.forEach { removeDraftFile(it.id) }
+        collectOrphans()
+        notes.size
     }
     private fun parseImport(document: ByteArray): List<TrackNote> {
         if (document.size > MAX_BYTES) throw NoteException(NoteError.TooLarge)
@@ -300,6 +346,11 @@ class FileTrackNotesRepository(
         return notes
     }
     override suspend fun previewImport(document: ByteArray): Int = io { validatedImport(document).size }
+    override suspend fun previewArchive(document: ByteArray): Int = io {
+        val notes = NoteArchiveCodec(crypto).decode(document)
+        for (note in notes) if (!exists(note.id)) throw NoteException(NoteError.InvalidInput)
+        notes.size
+    }
     override suspend fun importDocument(document: ByteArray) = io {
         val imported = validatedImport(document)
         for (note in imported) promoteLegacyDraft(note.id)

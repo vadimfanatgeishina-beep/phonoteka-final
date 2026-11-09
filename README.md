@@ -1,4 +1,20 @@
-> **Следующее дополнение подготовлено:** риск-ориентированный step-up, private QR Activity/camera, server-side downgrade regression, измерительные инструменты. См. MISSING_FEATURES.md / MISSING_VERIFICATION.md. Новые тесты/сборки не запускались; прежние заявления об отсутствии этих исходников ниже исторические.
+> **Актуальный проект (ноябрь 2026):** объединённая «Фонотека» с двумя вариантами — `vulnerable` и `hardened`. Код и интерфейс общие, различаются проверками безопасности. Команды для этих вариантов приведены ниже. Исторические этапы и отчёты сохранены в документации, но их результаты не подтверждают автоматически текущую сборку.
+
+Репозиторий финального проекта: [phonoteka-final](https://github.com/vadimfanatgeishina-beep/phonoteka-final).
+
+## Собрать текущие варианты
+
+Нужны JDK 17 и Android SDK. Из корня проекта:
+
+```powershell
+.\gradlew.bat :app:assembleVulnerableDebug :app:assembleHardenedDebug
+.\gradlew.bat :app:testVulnerableDebugUnitTest :app:testHardenedDebugUnitTest
+.\gradlew.bat :app:lintVulnerableDebug :app:lintHardenedDebug
+```
+
+APK находятся в `app/build/outputs/apk/vulnerable/debug/` и `app/build/outputs/apk/hardened/debug/`. Debug-сборки используют тестовый ключ Android и предназначены для локального учебного стенда. Release-сборки требуют отдельной подписи перед распространением. Работающий локальный WSS-стенд описан в [LAB15_WSS_LOCAL.md](LAB15_WSS_LOCAL.md); он требует компьютера и `adb reverse`.
+
+Переключатели защит учебного стенда описаны в [RUNTIME_SECURITY_CONTROLS.md](RUNTIME_SECURITY_CONTROLS.md). Полноценного удалённого аккаунта и синхронизации между телефонами сейчас нет.
 
 > Актуальный этап: FINAL_STEP3.md / lab_reports/final_step3/RESULTS.md. Предыдущие отчёты исторические; Android acceptance не наследуется.
 

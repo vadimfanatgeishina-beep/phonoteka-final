@@ -9,6 +9,30 @@ import okhttp3.*
 import java.io.Closeable
 import java.util.UUID
 
+/**
+ * Нормализует адрес учебного WebSocket-стенда.
+ *
+ * `wss://host/path` → `https://host/path` (OkHttp сам выполняет апгрейд до WebSocket).
+ * `ws://host/path`  → `http://host/path` — но незашифрованный транспорт запрещён
+ * политикой лаборатории, поэтому возвращается ошибка.
+ */
+internal fun normalizeLabWsUrl(url: String): String {
+    val trimmed = url.trim()
+    require(trimmed.isNotEmpty()) { "Пустой адрес стенда" }
+    require(!trimmed.startsWith("ws://")) {
+        "Незашифрованный WebSocket запрещён: нужен wss://"
+    }
+    // wss:// → https:// — OkHttp HttpUrl не принимает схему wss, использует https + upgrade.
+    if (trimmed.startsWith("wss://")) {
+        return "https://" + trimmed.removePrefix("wss://")
+    }
+    // https:// уже в нормальной форме — принимаем как есть (тесты MockWebServer, внутренние вызовы).
+    require(trimmed.startsWith("https://")) {
+        "Стенд доступен только по wss:// (или https:// для тестов)"
+    }
+    return trimmed
+}
+
 data class LiveSocketMetrics(val connected: Boolean = false, val attempts: Int = 0, val reconnects: Int = 0,
     val sent: Int = 0, val received: Int = 0, val rejected: Int = 0, val terminalError: String? = null,
     /** ЛР15: короткий хеш пользователя, к которому привязано соединение (не сам userId). */
@@ -31,9 +55,19 @@ class LocalLiveSocket(private val client: OkHttpClient, private val signer: Hmac
     @Volatile private var socket: WebSocket? = null
     @Volatile private var activeChannel: String? = null
 
+    /**
+     * Подключается к локальному стенду.
+     *
+     * OkHttp моделирует защищённый WebSocket-хендшейк как обычный HTTPS: `HttpUrl`
+     * не понимает схему `wss` и выбросил бы IllegalArgumentException. Поэтому `wss://`
+     * нормализуется в `https://`, а апгрейд до WebSocket выполняет сам OkHttp.
+     * Принимается ТОЛЬКО собственный локальный стенд (localhost, без учётных данных).
+     */
     fun connect(url: String) {
-        val request = Request.Builder().url(url).build()
-        require(request.url.scheme == "https" && request.url.host == "localhost" && request.url.username.isEmpty() && request.url.password.isEmpty())
+        val normalized = normalizeLabWsUrl(url)
+        val request = Request.Builder().url(normalized).build()
+        require(request.url.scheme == "https" && request.url.host == "localhost" &&
+            request.url.username.isEmpty() && request.url.password.isEmpty())
         require(request.url.encodedPath == "/ws" && request.url.query == null)
         close()
         mutable.value = LiveSocketMetrics()
@@ -103,6 +137,19 @@ class LocalLiveSocket(private val client: OkHttpClient, private val signer: Hmac
 
     /** Вызывается при выходе/смене роли/блокировке: немедленно рвёт соединение. */
     fun onPrincipalChanged() { close(); mutable.update { it.copy(terminalError = USER_CHANGED, boundUserTag = null) } }
+
+    /** Отправляет реальный подписанный запрос по уже открытому каналу. */
+    fun sendMetricRequest(): Boolean {
+        val channel = activeChannel ?: return false
+        val connection = socket ?: return false
+        if (!mutable.value.connected) return false
+        val principal = userBinding?.currentPrincipal?.invoke()
+        if (userBinding != null && principal == null) { onPrincipalChanged(); return false }
+        val frameSigner = principal?.let { userBinding!!.keys.frameSigner(it.userId, userBinding.clockSeconds) } ?: signer
+        val sent = connection.send(frameSigner.sign("$channel/request", "local metric request").toWire())
+        if (sent) mutable.update { it.copy(sent = it.sent + 1) }
+        return sent
+    }
 
     override fun close() { job?.cancel(); job = null; socket?.cancel(); socket = null; activeChannel = null; mutable.update { it.copy(connected = false) } }
 

@@ -18,16 +18,55 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Defaults for every variant; each flavor overrides them explicitly.
+        manifestPlaceholders["allowBackup"] = "false"
+        manifestPlaceholders["allowCleartext"] = "false"
+    }
+
+    // Две сборки одной кодовой базы (объединённая Фонотека).
+    // Различия ТОЛЬКО в поведении защитных механизмов: экраны, навигация, фикстуры — общие.
+    flavorDimensions += "security"
+    productFlavors {
+        create("vulnerable") {
+            dimension = "security"
+            applicationIdSuffix = ".vulnerable"
+            buildConfigField("String", "SECURITY_MODE", "\"VULNERABLE\"")
+            buildConfigField("boolean", "ENFORCE_CERT_PINNING", "false")
+            buildConfigField("boolean", "ENFORCE_STEP_UP", "false")
+            buildConfigField("boolean", "ENFORCE_OTP_SINGLE_USE", "false")
+            buildConfigField("boolean", "ENFORCE_QR_TICKET_SINGLE_USE", "false")
+            buildConfigField("boolean", "REQUIRE_FRESH_AUTH_FOR_LIBRARY", "false")
+            buildConfigField("boolean", "ALLOW_USER_CA", "true")
+            buildConfigField("boolean", "ALLOW_CLEARTEXT", "true")
+            buildConfigField("boolean", "ALLOW_BACKUP", "true")
+            manifestPlaceholders["allowBackup"] = "true"
+            manifestPlaceholders["allowCleartext"] = "true"
+        }
+        create("hardened") {
+            dimension = "security"
+            applicationIdSuffix = ".hardened"
+            buildConfigField("String", "SECURITY_MODE", "\"HARDENED\"")
+            buildConfigField("boolean", "ENFORCE_CERT_PINNING", "true")
+            buildConfigField("boolean", "ENFORCE_STEP_UP", "true")
+            buildConfigField("boolean", "ENFORCE_OTP_SINGLE_USE", "true")
+            buildConfigField("boolean", "ENFORCE_QR_TICKET_SINGLE_USE", "true")
+            buildConfigField("boolean", "REQUIRE_FRESH_AUTH_FOR_LIBRARY", "true")
+            buildConfigField("boolean", "ALLOW_USER_CA", "false")
+            buildConfigField("boolean", "ALLOW_CLEARTEXT", "false")
+            buildConfigField("boolean", "ALLOW_BACKUP", "false")
+            manifestPlaceholders["allowBackup"] = "false"
+            manifestPlaceholders["allowCleartext"] = "false"
+        }
     }
 
     buildTypes {
         debug {
             // Public owned-fixture key only, never a real service secret. Empty => WSS demo disabled.
-            val localFixtureKey = System.getenv("PHONOTEKA_MOCK_HMAC_KEY").orEmpty()
+            val localFixtureKey = System.getenv("PHONOTEKA_MOCK_HMAC_KEY") ?: "phonoteka-owned-lab15-demo-key-v1"
             require(localFixtureKey.isEmpty() || localFixtureKey.matches(Regex("[A-Za-z0-9._-]{1,128}")))
             buildConfigField("String", "LOCAL_FIXTURE_KEY", "\"$localFixtureKey\"")
-            // Keep a local verification build installable beside an existing signed app.
-            applicationIdSuffix = ".final"
+            // Отдельный applicationId, чтобы debug-сборка вставала рядом с release-вариантом.
+            applicationIdSuffix = ".debug"
         }
         release {
             buildConfigField("String", "LOCAL_FIXTURE_KEY", "\"\"")

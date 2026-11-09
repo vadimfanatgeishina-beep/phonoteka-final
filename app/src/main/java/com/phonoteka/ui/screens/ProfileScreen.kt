@@ -1,317 +1,244 @@
 package com.phonoteka.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import android.graphics.Bitmap
+import android.net.Uri
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.CollectionInfo
-import androidx.compose.ui.semantics.CollectionItemInfo
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.collectionInfo
-import androidx.compose.ui.semantics.collectionItemInfo
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.phonoteka.diagnostics.RecordRecomposition
-import com.phonoteka.ui.components.AppButton
-import com.phonoteka.ui.components.AppButtonSize
-import com.phonoteka.ui.components.AppButtonStyle
-import com.phonoteka.ui.components.ButtonState
-import com.phonoteka.ui.components.FormField
-import com.phonoteka.ui.components.FormFieldState
-import com.phonoteka.ui.components.LoadingButton
-import com.phonoteka.ui.components.ProfileCard
-import com.phonoteka.ui.components.SnackbarLikeMessage
-import com.phonoteka.ui.components.StatusButton
-import com.phonoteka.ui.theme.LocalExtendedColors
-import com.phonoteka.ui.theme.PhonotekaTheme
+import androidx.core.content.ContextCompat
+import coil.compose.AsyncImage
 import com.phonoteka.viewmodel.ProfileData
 import com.phonoteka.viewmodel.ProfileSaveStatus
-import com.phonoteka.viewmodel.ProfileUiState
 import com.phonoteka.viewmodel.ProfileViewModel
-import com.phonoteka.viewmodel.ThemeMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.UUID
 
-enum class ProfileWidthClass { COMPACT, MEDIUM, EXPANDED }
-
-fun profileWidthClass(widthDp: Int): ProfileWidthClass = when {
-    widthDp < 600 -> ProfileWidthClass.COMPACT
-    widthDp < 840 -> ProfileWidthClass.MEDIUM
-    else -> ProfileWidthClass.EXPANDED
-}
-
-/** Статистика передаётся снаружи (реальные счётчики фонотеки), а не захардкожена. */
+/** Counters come from the track repository, never from profile preferences. */
 data class ProfileStats(val totalTracks: Int, val doneTracks: Int, val reviewTracks: Int)
 
-class ProfileActions(
-    val onName: (String) -> Unit,
-    val onBio: (String) -> Unit,
-    val onSave: () -> Unit,
-    val onCancel: () -> Unit,
-    val onReset: () -> Unit,
-    val onDismissMessage: () -> Unit,
-    val onThemeMode: (ThemeMode) -> Unit,
-    val onForceDark: (Boolean) -> Unit
-)
-
-/** ЛР8: экран «Мой профиль». ViewModel остаётся здесь — в компоненты она не передаётся. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
     stats: ProfileStats,
-    themeMode: ThemeMode,
-    forceDark: Boolean,
-    onThemeMode: (ThemeMode) -> Unit,
-    onForceDark: (Boolean) -> Unit,
+    accessRole: String,
+    sessionActive: Boolean,
     onBack: () -> Unit
 ) {
-    RecordRecomposition("ProfileScreen")
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val actions = remember(viewModel, onThemeMode, onForceDark) {
-        ProfileActions(viewModel::onNameChange, viewModel::onBioChange, viewModel::save, viewModel::cancel,
-            viewModel::reset, viewModel::dismissMessage, onThemeMode, onForceDark)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var editing by remember { mutableStateOf(false) }
+    var photoSheet by remember { mutableStateOf(false) }
+    var photoError by remember { mutableStateOf<String?>(null) }
+    BackHandler(editing) { viewModel.cancel(); editing = false }
+
+    LaunchedEffect(state.status) {
+        if (state.status == ProfileSaveStatus.SAVED) editing = false
     }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) scope.launch {
+            runCatching { withContext(Dispatchers.IO) { copyAvatar(context, uri) } }
+                .onSuccess(viewModel::onAvatarChange)
+                .onFailure { photoError = "Не удалось прочитать фото. Выбери другое изображение." }
+        }
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+        if (bitmap != null) scope.launch {
+            runCatching { withContext(Dispatchers.IO) { saveAvatar(context, bitmap) } }
+                .onSuccess(viewModel::onAvatarChange)
+                .onFailure { photoError = "Не удалось сохранить фото. Попробуй ещё раз." }
+        }
+    }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            runCatching { camera.launch(null) }
+                .onFailure { photoError = "Не удалось открыть камеру. Попробуй выбрать фото из галереи." }
+        } else photoError = "Для съёмки аватара разреши доступ к камере. Галерея доступна без него."
+    }
+
+    Box(Modifier.fillMaxSize()) {
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Профиль · ЛР8") }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
-        })
+        TopAppBar(
+            title = { Text(if (editing) "Редактировать профиль" else "Мой профиль") },
+            navigationIcon = { if (com.phonoteka.ui.components.LocalEmbeddedBackVisible.current) IconButton(onClick = {
+                if (editing) { viewModel.cancel(); editing = false } else onBack()
+            }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") } }
+        )
     }) { padding ->
-        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-            ProfileScreenContent(state, stats, themeMode, forceDark, actions, profileWidthClass(maxWidth.value.toInt()))
-        }
-    }
-}
-
-@Composable
-fun ProfileScreenContent(
-    state: ProfileUiState,
-    stats: ProfileStats,
-    themeMode: ThemeMode,
-    forceDark: Boolean,
-    actions: ProfileActions,
-    widthClass: ProfileWidthClass
-) {
-    // MEDIUM использует двухколоночную раскладку: на планшете в портрете ей хватает места.
-    if (widthClass == ProfileWidthClass.COMPACT) ProfileScreenCompact(state, stats, themeMode, forceDark, actions)
-    else ProfileScreenExpanded(state, stats, themeMode, forceDark, actions)
-}
-
-@Composable
-fun ProfileScreenCompact(state: ProfileUiState, stats: ProfileStats, themeMode: ThemeMode, forceDark: Boolean, actions: ProfileActions) {
-    val nameFocus = remember { FocusRequester() }
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag("profileColumn"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        ProfileHeader()
-        AppearingProfileCard(state.saved, onEdit = { nameFocus.requestFocus() })
-        StatsBlock(stats, tiles = false)
-        Achievements(stats)
-        ProfileForm(state, actions, nameFocus)
-        ThemeBlock(themeMode, forceDark, actions)
-    }
-}
-
-@Composable
-fun ProfileScreenExpanded(state: ProfileUiState, stats: ProfileStats, themeMode: ThemeMode, forceDark: Boolean, actions: ProfileActions) {
-    val nameFocus = remember { FocusRequester() }
-    Row(Modifier.fillMaxSize().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).testTag("profileColumn"),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileHeader()
-            AppearingProfileCard(state.saved, onEdit = { nameFocus.requestFocus() })
-            StatsBlock(stats, tiles = true)
-            Achievements(stats)
-        }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).testTag("profileColumn"),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileForm(state, actions, nameFocus)
-            ThemeBlock(themeMode, forceDark, actions)
-        }
-    }
-}
-
-@Composable
-private fun ProfileHeader() {
-    val ext = LocalExtendedColors.current
-    Text(
-        "Мой профиль",
-        style = MaterialTheme.typography.headlineMedium,
-        color = MaterialTheme.colorScheme.onPrimary,
-        modifier = Modifier.fillMaxWidth()
-            .background(Brush.horizontalGradient(listOf(ext.headerStart, ext.headerEnd)), MaterialTheme.shapes.large)
-            .padding(20.dp)
-            .testTag("profileHeader")
-            .semantics { heading() }
-    )
-}
-
-@Composable
-private fun AppearingProfileCard(data: ProfileData, onEdit: () -> Unit) {
-    val visible = remember { MutableTransitionState(false).apply { targetState = true } }
-    AnimatedVisibility(visibleState = visible, enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 },
-        label = "profileCardAppear") {
-        ProfileCard(
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }, // декоративная
-            title = data.name,
-            subtitle = data.bio.ifBlank { "Описание не заполнено" },
-            trailingContent = {
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Редактировать имя") }
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ProfileAvatar(if (editing) state.draft else state.saved, Modifier.size(132.dp))
+            if (editing) {
+                TextButton(onClick = { photoSheet = true }) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Изменить фото")
+                }
+                OutlinedTextField(
+                    value = state.draft.name, onValueChange = viewModel::onNameChange,
+                    label = { Text("Ник") }, isError = state.nameError != null,
+                    supportingText = state.nameError?.let { error -> { Text(error) } },
+                    modifier = Modifier.fillMaxWidth().testTag("profileName"), singleLine = true
+                )
+                OutlinedTextField(
+                    value = state.draft.personalRole, onValueChange = viewModel::onRoleChange,
+                    label = { Text("Роль о себе") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = state.draft.bio, onValueChange = viewModel::onBioChange,
+                    label = { Text("Описание") }, modifier = Modifier.fillMaxWidth().heightIn(min = 112.dp),
+                    maxLines = 4
+                )
+                Text("Роль доступа назначается отдельно и здесь не меняется.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(
+                    onClick = viewModel::save, enabled = state.canSave,
+                    modifier = Modifier.fillMaxWidth().testTag("profileSave")
+                ) { Text(if (state.status == ProfileSaveStatus.SAVING) "Сохранение…" else "Сохранить") }
+                OutlinedButton(onClick = { viewModel.cancel(); editing = false }, modifier = Modifier.fillMaxWidth().testTag("profileCancel")) {
+                    Text("Отмена")
+                }
+                TextButton(onClick = viewModel::reset, modifier = Modifier.testTag("profileReset")) { Text("Сбросить поля") }
+            } else {
+                Text(state.saved.name, style = MaterialTheme.typography.headlineMedium)
+                Text(state.saved.personalRole.ifBlank { "Роль о себе не указана" },
+                    style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(state.saved.bio.ifBlank { "Расскажи немного о себе" },
+                    style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                Button(onClick = { editing = true }, modifier = Modifier.fillMaxWidth().testTag("profileEdit")) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Редактировать")
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatTile("В библиотеке", stats.totalTracks, Modifier.weight(1f))
+                    StatTile("Скачано", stats.doneTracks, Modifier.weight(1f))
+                    StatTile("На проверке", stats.reviewTracks, Modifier.weight(1f))
+                }
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(when (accessRole) {
+                            "ADMIN" -> "Главный администратор"
+                            "SECURITY" -> "Руководитель безопасности"
+                            else -> "Владелец профиля"
+                        }, style = MaterialTheme.typography.titleMedium)
+                        Text("Текущие права: ${when (accessRole) {
+                            "ADMIN" -> "администратор"
+                            "SECURITY" -> "безопасность"
+                            else -> "сотрудник"
+                        }}", style = MaterialTheme.typography.bodySmall)
+                        Text(if (sessionActive) "Сессия активна" else "Требуется повторный вход",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
-        )
+            state.message?.let { Text(it, color = if (state.status == ProfileSaveStatus.ERROR)
+                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) }
+            photoError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
-}
-
-@Composable
-private fun StatsBlock(stats: ProfileStats, tiles: Boolean) {
-    val lines = listOf(
-        "Треков в библиотеке: ${stats.totalTracks}",
-        "Обработано: ${stats.doneTracks}",
-        "На проверке: ${stats.reviewTracks}"
-    )
-    Column(Modifier.semantics(mergeDescendants = true) {}) {
-        Text("Статистика", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        if (tiles) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            lines.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f)
-                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small).padding(8.dp)) }
-        } else lines.forEach { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    com.phonoteka.ui.components.CelebrationBurst(state.celebrationTick, Modifier.matchParentSize())
     }
-}
-
-@Composable
-private fun Achievements(stats: ProfileStats) {
-    val items = listOf(
-        "Первый трек" to (stats.totalTracks > 0),
-        "10 обработанных" to (stats.doneTracks >= 10),
-        "Без треков на проверке" to (stats.totalTracks > 0 && stats.reviewTracks == 0)
-    )
-    Column(Modifier.testTag("achievements").semantics { collectionInfo = CollectionInfo(rowCount = items.size, columnCount = 1) }) {
-        Text("Достижения", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        items.forEachIndexed { index, (title, got) ->
-            Text(
-                (if (got) "★ " else "☆ ") + title + if (got) " — получено" else " — не получено",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.semantics { collectionItemInfo = CollectionItemInfo(index, 1, 0, 1) }
-            )
+    if (photoSheet) ModalBottomSheet(onDismissRequest = { photoSheet = false }) {
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Фото профиля", style = MaterialTheme.typography.titleLarge)
+            TextButton(onClick = { photoSheet = false; gallery.launch("image/*") }) { Text("Выбрать из галереи") }
+            TextButton(onClick = {
+                photoSheet = false
+                photoError = null
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    runCatching { camera.launch(null) }
+                        .onFailure { photoError = "Не удалось открыть камеру. Попробуй выбрать фото из галереи." }
+                } else cameraPermission.launch(Manifest.permission.CAMERA)
+            }) { Text("Сделать фото") }
+            TextButton(onClick = { photoSheet = false; viewModel.onAvatarChange("") }) { Text("Удалить фото") }
+            TextButton(onClick = { photoSheet = false }) { Text("Отмена") }
         }
     }
 }
 
-@Composable
-private fun ProfileForm(state: ProfileUiState, actions: ProfileActions, nameFocus: FocusRequester) {
-    val saving = state.status == ProfileSaveStatus.SAVING
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FormField(
-            value = state.draft.name, onValueChange = actions.onName, label = "Имя",
-            state = if (saving) FormFieldState.DISABLED else if (state.nameError != null) FormFieldState.ERROR else FormFieldState.IDLE,
-            message = state.nameError, modifier = Modifier.fillMaxWidth().focusRequester(nameFocus).testTag("profileName")
-        )
-        FormField(value = "Слушатель", onValueChange = {}, label = "Роль", state = FormFieldState.DISABLED,
-            message = "Роль назначается администратором", modifier = Modifier.fillMaxWidth())
-        FormField(
-            value = state.draft.bio, onValueChange = actions.onBio, label = "О себе",
-            state = if (saving) FormFieldState.DISABLED else if (state.bioWarning != null) FormFieldState.WARNING else FormFieldState.IDLE,
-            message = state.bioWarning, singleLine = false, modifier = Modifier.fillMaxWidth().testTag("profileBio")
-        )
-        LoadingButton("Сохранить изменения", actions.onSave, isLoading = saving, enabled = state.canSave,
-            modifier = Modifier.fillMaxWidth().testTag("profileSave"))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            AppButton(modifier = Modifier.testTag("profileCancel"), text = "Отмена", onClick = actions.onCancel,
-                style = AppButtonStyle.SECONDARY, size = AppButtonSize.MEDIUM, enabled = state.dirty && !saving)
-            AppButton(modifier = Modifier.testTag("profileReset"), text = "Сбросить", onClick = actions.onReset,
-                style = AppButtonStyle.OUTLINED, size = AppButtonSize.SMALL, enabled = !saving)
-        }
-        StatusButton(
-            text = "Статус сохранения",
-            state = when (state.status) {
-                ProfileSaveStatus.IDLE -> ButtonState.IDLE; ProfileSaveStatus.SAVING -> ButtonState.LOADING
-                ProfileSaveStatus.SAVED -> ButtonState.SUCCESS; ProfileSaveStatus.ERROR -> ButtonState.ERROR
-            },
-            onClick = actions.onSave
-        )
-        state.message?.let { msg ->
-            SnackbarLikeMessage(msg, isError = state.status == ProfileSaveStatus.ERROR, onDismiss = actions.onDismissMessage)
+@Composable private fun ProfileAvatar(data: ProfileData, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val safeName = data.avatarFile.takeIf { it.matches(Regex("avatar_[a-f0-9-]+\\.jpg")) }
+    val image = safeName?.let { File(File(context.filesDir, "profile"), it) }?.takeIf(File::exists)
+    Box(modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+        if (image != null) AsyncImage(model = image, contentDescription = "Аватар профиля",
+            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+        else Icon(Icons.Default.Person, contentDescription = "Аватар профиля", modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable private fun StatTile(label: String, count: Int, modifier: Modifier) {
+    Card(modifier) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(count.toString(), style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
         }
     }
 }
 
-@Composable
-private fun ThemeBlock(themeMode: ThemeMode, forceDark: Boolean, actions: ProfileActions) {
-    Column {
-        Text("Тема", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        Column(Modifier.selectableGroup()) {
-            listOf(ThemeMode.SYSTEM to "Как в системе", ThemeMode.LIGHT to "Светлая", ThemeMode.DARK to "Тёмная").forEach { (mode, label) ->
-                Row(
-                    Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("theme_${mode.name}")
-                        .selectable(selected = themeMode == mode, role = Role.RadioButton, onClick = { actions.onThemeMode(mode) }),
-                    verticalAlignment = Alignment.CenterVertically
-                ) { RadioButton(selected = themeMode == mode, onClick = null); Text(label, Modifier.padding(start = 8.dp)) }
+private fun avatarDirectory(context: android.content.Context) = File(context.filesDir, "profile").also { it.mkdirs() }
+private fun avatarFile(context: android.content.Context) = File(avatarDirectory(context), "avatar_${UUID.randomUUID()}.jpg")
+
+private fun copyAvatar(context: android.content.Context, uri: Uri): String {
+    val output = avatarFile(context)
+    try {
+        context.contentResolver.openInputStream(uri).use { input ->
+            requireNotNull(input) { "Image unavailable" }
+            output.outputStream().use { target ->
+                val buffer = ByteArray(8192)
+                var total = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= 8L * 1024 * 1024) { "Image too large" }
+                    target.write(buffer, 0, count)
+                }
+                require(total > 0) { "Empty image" }
             }
         }
-        Row(
-            Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("forceDark")
-                .toggleable(value = forceDark, role = Role.Switch, onValueChange = actions.onForceDark),
-            verticalAlignment = Alignment.CenterVertically
-        ) { Text("Принудительно тёмный контент", Modifier.weight(1f)); Switch(checked = forceDark, onCheckedChange = null) }
-    }
+        return output.name
+    } catch (failure: Exception) { output.delete(); throw failure }
 }
 
-private val previewActions = ProfileActions({}, {}, {}, {}, {}, {}, {}, {})
-private val previewState = ProfileUiState(saved = ProfileData(bio = "Люблю джаз"), draft = ProfileData(bio = "Люблю джаз"), loaded = true)
-
-@Preview(name = "Профиль — светлая", showBackground = true, widthDp = 400)
-@Composable
-private fun ProfileLightPreview() = PhonotekaTheme(themeMode = ThemeMode.LIGHT) {
-    ProfileScreenContent(previewState, ProfileStats(42, 12, 0), ThemeMode.LIGHT, false, previewActions, ProfileWidthClass.COMPACT)
-}
-
-@Preview(name = "Профиль — тёмная", showBackground = true, widthDp = 400)
-@Composable
-private fun ProfileDarkPreview() = PhonotekaTheme(themeMode = ThemeMode.DARK) {
-    ProfileScreenContent(previewState, ProfileStats(42, 12, 3), ThemeMode.DARK, false, previewActions, ProfileWidthClass.COMPACT)
-}
-
-@Preview(name = "Профиль — Expanded", showBackground = true, widthDp = 900)
-@Composable
-private fun ProfileExpandedPreview() = PhonotekaTheme(themeMode = ThemeMode.LIGHT) {
-    ProfileScreenContent(previewState, ProfileStats(42, 12, 3), ThemeMode.LIGHT, false, previewActions, ProfileWidthClass.EXPANDED)
+private fun saveAvatar(context: android.content.Context, bitmap: Bitmap): String {
+    val output = avatarFile(context)
+    try {
+        output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)) }
+        return output.name
+    } catch (failure: Exception) { output.delete(); throw failure }
 }

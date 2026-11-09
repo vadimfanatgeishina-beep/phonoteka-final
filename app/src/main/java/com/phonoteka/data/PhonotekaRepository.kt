@@ -253,6 +253,7 @@ class PhonotekaRepository(
         requireWrite("library.searchTrack")
         val track = dao.snapshot().find { it.id == trackId }?.toDomain()
             ?: throw IllegalArgumentException("Запись не найдена")
+        requireNetworkTransport(context)
         dao.updateError(trackId, TrackStatus.SEARCHING.storageKey, null)
         try {
             val candidates = searcher.search(track, source)
@@ -271,6 +272,9 @@ class PhonotekaRepository(
             }
             candidates
         } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            dao.updateError(trackId, TrackStatus.ERROR.storageKey, e.message ?: "Сеть недоступна")
             throw e
         } catch (e: Exception) {
             dao.updateError(trackId, TrackStatus.ERROR.storageKey, e.message ?: "Ошибка поиска")
@@ -304,6 +308,7 @@ class PhonotekaRepository(
         onProgress: (bytes: Long) -> Unit
     ): File = withContext(Dispatchers.IO) {
         requireWrite("library.downloadTrack")
+        requireNetworkTransport(context)
         val track = dao.snapshot().find { it.id == trackId }?.toDomain()
             ?: throw IllegalArgumentException("Запись не найдена")
 

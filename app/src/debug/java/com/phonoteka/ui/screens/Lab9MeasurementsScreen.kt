@@ -33,7 +33,7 @@ import kotlinx.coroutines.withContext
             try { payload = RecompositionProbe.stopCsv(); exporter.launch("owned-compose-counts.csv") }
             catch (_: IllegalStateException) { message = "Сначала начните окно измерения" }
         }) { Text("Остановить и экспортировать") }
-        TextButton(onClick = onBack) { Text("Назад к приложению") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
         message?.let { Text(it) }
     }
 }

@@ -123,7 +123,7 @@ fun FreeNotesContent(
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Заметки · ЛР11", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-            TextButton(onClick = onBack) { Text("Назад") }
+            com.phonoteka.ui.components.AppBackTextButton(onBack)
         }
         val statusText = saveStatusText(state.saveStatus)
         Text(statusText, style = MaterialTheme.typography.bodyMedium,

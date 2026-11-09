@@ -144,7 +144,7 @@ fun Lab14AccessScreen(onBack: () -> Unit) {
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Доступ и аудит · ЛР14") }, navigationIcon = {
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
     }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Демонстрационная локальная сессия с ролью и scopes. Токен учебный, не является серверной авторизацией.")

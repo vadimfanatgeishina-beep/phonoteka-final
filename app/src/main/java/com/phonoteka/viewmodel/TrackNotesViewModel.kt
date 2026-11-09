@@ -18,7 +18,9 @@ enum class DraftPersistence { IDLE, SAVING, SAVED, FAILED }
 data class NotesUiState(val notes: List<NoteRead> = emptyList(), val busy: Boolean = false,
     val message: String? = null, val draftPersistence: DraftPersistence = DraftPersistence.IDLE,
     val trash: List<TrashNote> = emptyList(), val damagedCount: Int = 0,
-    val integrityChecked: Int = 0, val integrityTotal: Int = 0, val importCount: Int? = null)
+    val integrityChecked: Int = 0, val integrityTotal: Int = 0, val importCount: Int? = null,
+    /** ЛР11: импортируется зашифрованный архив (восстанавливает вложения), а не обычный JSON. */
+    val importIsArchive: Boolean = false)
 @MainThread
 class TrackNotesViewModel(private val repository: TrackNotes, private val saved: SavedStateHandle) : ViewModel() {
     // SavedStateHandle may also contain default/Intent arguments. Plaintext legacy
@@ -28,6 +30,8 @@ class TrackNotesViewModel(private val repository: TrackNotes, private val saved:
     private val all = MutableStateFlow(NotesUiState())
     private val query = MutableStateFlow("")
     private var pendingImport: ByteArray? = null
+    /** ЛР11: вид файла, ожидающего подтверждения импорта. */
+    private var pendingIsArchive = false
     private val editId = saved.getStateFlow("note.id", 1L)
     private val editing = MutableStateFlow(TrackNote(editId.value, "", ""))
     val draft: StateFlow<TrackNote> = editing.asStateFlow()
@@ -115,7 +119,37 @@ class TrackNotesViewModel(private val repository: TrackNotes, private val saved:
         awaitDrafts()
     }
     fun update(id: Long, title: String, text: String, pinned: Boolean = false) {
-        if (id > 0 && !all.value.busy) setDraft(TrackNote(id, title.take(1000), text.take(100_000), pinned), true)
+        // Вложения не теряются при правке текста: они принадлежат заметке, а не полю ввода.
+        val current = editing.value
+        val attachments = if (current.id == id) current.attachments else emptyList()
+        if (id > 0 && !all.value.busy) setDraft(TrackNote(id, title.take(1000), text.take(100_000), pinned, current.updatedAt, attachments), true)
+    }
+
+    /**
+     * ЛР11: прикрепляет картинку к редактируемой заметке.
+     * Данные уходят в черновик как вложение и сохраняются ВМЕСТЕ с телом заметки,
+     * поэтому «импорт успешен, а картинок нет» уже невозможно.
+     */
+    fun attachImage(id: Long, fileName: String, mimeType: String, bytes: ByteArray) = action {
+        if (id <= 0) throw NoteException(NoteError.InvalidInput)
+        val current = editing.value
+        if (current.attachments.size >= AttachmentLimits.MAX_COUNT) throw NoteException(NoteError.TooLarge)
+        val normalized = mimeType.lowercase().let { if (it == "image/jpg") "image/jpeg" else it }
+        val attachment = NoteAttachment(
+            id = java.util.UUID.randomUUID().toString().replace("-", "").take(16),
+            fileName = fileName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(80).ifBlank { "image.png" },
+            mimeType = normalized,
+            data = AttachmentLimits.encodeBase64(bytes))
+        val next = current.copy(attachments = current.attachments + attachment)
+        AttachmentLimits.validate(next.attachments)
+        setDraft(next, persist = true)
+        all.update { it.copy(message = "Картинка прикреплена к заметке") }
+    }
+
+    fun removeAttachment(id: Long, attachmentId: String) = action {
+        val current = editing.value
+        if (current.id != id) throw NoteException(NoteError.InvalidInput)
+        setDraft(current.copy(attachments = current.attachments.filterNot { it.id == attachmentId }), persist = true)
     }
     fun save() = action {
         awaitDrafts(); repository.save(snapshot()); reload()
@@ -167,20 +201,46 @@ class TrackNotesViewModel(private val repository: TrackNotes, private val saved:
         all.update { it.copy(message = "Проверено: ${summary.checked}; восстановлено: ${summary.recovered}; повреждено: ${summary.damaged}") }
     }
     fun prepareImport(bytes: ByteArray) = action {
-        pendingImport = null; all.update { it.copy(importCount = null) }
+        pendingImport = null; pendingIsArchive = false; all.update { it.copy(importCount = null, importIsArchive = false) }
         val captured = bytes.copyOf() // Caller/URI mutations cannot change the confirmed payload.
         val count = repository.previewImport(captured)
-        pendingImport = captured; all.update { it.copy(importCount = count) }
+        pendingImport = captured; pendingIsArchive = false
+        all.update { it.copy(importCount = count, importIsArchive = false) }
     }
-    fun cancelImport() { if (!all.value.busy) { pendingImport = null; all.update { it.copy(importCount = null) } } }
+    fun cancelImport() { if (!all.value.busy) { pendingImport = null; pendingIsArchive = false
+        all.update { it.copy(importCount = null, importIsArchive = false) } } }
     fun applyPreparedImport() = action {
         val bytes = pendingImport ?: throw NoteException(NoteError.InvalidInput)
-        awaitDrafts(); repository.importDocument(bytes); pendingImport = null
-        reload(); all.update { it.copy(importCount = null, message = "Импорт завершён") }
+        awaitDrafts(); repository.importDocument(bytes); pendingImport = null; pendingIsArchive = false
+        reload(); all.update { it.copy(importCount = null, importIsArchive = false, message = "Импорт завершён") }
         val id = editId.value
         setDraft(repository.draft(id) ?: all.value.notes.firstOrNull { it.note.id == id && !it.damaged }?.note ?: TrackNote(id, "", ""), false)
     }
     suspend fun export(): ByteArray = repository.export()
+    /** ЛР11: зашифрованный архив — сохраняет вложения вместе с заметками. */
+    suspend fun exportArchive(): ByteArray = repository.exportArchive()
+
+    /** ЛР11: подготовка импорта архива. Повреждённый архив падает ЗДЕСЬ, а не после «успеха». */
+    fun prepareArchiveImport(bytes: ByteArray) = action {
+        pendingImport = null; pendingIsArchive = false; all.update { it.copy(importCount = null, importIsArchive = false) }
+        val captured = bytes.copyOf()
+        // Сначала проверяем, что это вообще архив и он читается: число вложений известно заранее.
+        val count = repository.previewArchive(captured)
+        pendingImport = captured; pendingIsArchive = true
+        all.update { it.copy(importCount = count, importIsArchive = true,
+            message = "Архив проверен: заметок $count. Импорт восстановит заметки вместе с картинками.") }
+    }
+
+    fun applyPreparedArchiveImport() = action {
+        val bytes = pendingImport ?: throw NoteException(NoteError.InvalidInput)
+        awaitDrafts()
+        val count = repository.importArchive(bytes)
+        pendingImport = null
+        reload()
+        all.update { it.copy(importCount = null, message = "Импорт архива завершён: восстановлено заметок $count (вместе с вложениями)") }
+        val id = editId.value
+        setDraft(repository.draft(id) ?: all.value.notes.firstOrNull { it.note.id == id && !it.damaged }?.note ?: TrackNote(id, "", ""), false)
+    }
     private suspend fun reload() {
         val notes = repository.list(); val trash = repository.trash()
         all.update { it.copy(notes = notes, trash = trash, damagedCount = notes.count { note -> note.damaged }) }

@@ -32,10 +32,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.painter.ColorPainter
-import coil.compose.AsyncImage
+import com.phonoteka.ui.components.MusicCover
+import com.phonoteka.ui.components.albumArtworkFor
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.snapshotFlow
 import com.phonoteka.viewmodel.CatalogUiState
@@ -47,10 +45,10 @@ fun Lab10CatalogScreen(viewModel: PostCatalogViewModel, onBack: () -> Unit, onPo
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searchQuery by viewModel.query.collectAsStateWithLifecycle()
     val retryMessage by viewModel.retryMessage.collectAsStateWithLifecycle()
-    Scaffold(topBar = { TopAppBar(title = { Text("Каталог постов · ЛР10") }, actions = {
+    Scaffold(topBar = { TopAppBar(title = { Text("Музыкальные истории") }, actions = {
         IconButton(onClick = viewModel::refresh) { Icon(Icons.Default.Refresh, contentDescription = "Обновить каталог") }
     }, navigationIcon = {
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
     }) }) { padding ->
         when (val current = state) {
             CatalogUiState.Loading -> Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally,
@@ -69,7 +67,8 @@ fun Lab10CatalogScreen(viewModel: PostCatalogViewModel, onBack: () -> Unit, onPo
                             .collect { lastVisible -> if (lastVisible >= current.posts.size - 3) viewModel.loadNextPage() }
                     }
                 }
-                OutlinedTextField(value = searchQuery, onValueChange = viewModel::search, label = { Text("Поиск по заголовку") }, modifier = Modifier.fillMaxWidth())
+                Text("Подборки и идеи для твоей библиотеки", style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(value = searchQuery, onValueChange = viewModel::search, label = { Text("Поиск по теме") }, modifier = Modifier.fillMaxWidth())
                 if (current.offline) Text("Офлайн · показываем сохранённые данные", color = MaterialTheme.colorScheme.tertiary)
                 current.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (current.refreshing) Text(retryMessage ?: "Обновление…")
@@ -79,11 +78,12 @@ fun Lab10CatalogScreen(viewModel: PostCatalogViewModel, onBack: () -> Unit, onPo
                         items(current.posts, key = { it.id }) { post ->
                             Card(Modifier.fillMaxWidth().clickable { onPostClick(post.id) }) {
                                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    val imageFallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant)
-                                    AsyncImage(model = "https://i.pravatar.cc/96?img=${post.userId}", contentDescription = "Аватар автора ${post.userId}",
-                                        modifier = Modifier.padding(top = 4.dp).size(48.dp).clip(CircleShape), placeholder = imageFallback, error = imageFallback)
+                                    MusicCover(post.id, Modifier.padding(top = 4.dp).size(64.dp))
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("#${post.id} · ${post.title}", style = MaterialTheme.typography.titleMedium)
+                                        Text(post.title, style = MaterialTheme.typography.titleMedium)
+                                        val album = albumArtworkFor(post.id)
+                                        Text("Обложка: ${album.artist} · ${album.album}", style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Text(post.body.lines().firstOrNull().orEmpty(), style = MaterialTheme.typography.bodyMedium)
                                     }
                                 }

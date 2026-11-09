@@ -143,7 +143,7 @@ fun Lab13MockAuthScreen(repository: MockSessionRepository, onBack: () -> Unit, o
         ) { Text("Выйти и отозвать refresh token") }
         Text(message)
         if (remainingSeconds > 0) Text("Повторный вход через $remainingSeconds с.")
-        TextButton(onClick = onBack) { Text("Назад") }
+        com.phonoteka.ui.components.AppBackTextButton(onBack)
     }
 }
 

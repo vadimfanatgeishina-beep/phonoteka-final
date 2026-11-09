@@ -11,6 +11,8 @@ import com.phonoteka.data.ErrorType
 import com.phonoteka.data.Track
 import com.phonoteka.data.TrackLibrary
 import com.phonoteka.data.TrackStatus
+import com.phonoteka.data.NoNetworkException
+import com.phonoteka.network.MusicSourcesUnavailableException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -50,7 +52,8 @@ data class BatchOperationState(
     val current: Int = 0,
     val total: Int = 0,
     val currentTrackName: String = "",
-    val message: String? = null
+    val message: String? = null,
+    val retryOperation: String? = null
 )
 
 @OptIn(FlowPreview::class)
@@ -62,6 +65,12 @@ class TrackListViewModel(
     val searchQuery = _searchQuery.asStateFlow()
     private val _statusFilter = MutableStateFlow<TrackStatus?>(null)
     val statusFilter = _statusFilter.asStateFlow()
+    private val _phonotekaDownloadsOnly = MutableStateFlow(false)
+    val phonotekaDownloadsOnly = _phonotekaDownloadsOnly.asStateFlow()
+    private data class FilterSelection(val status: TrackStatus?, val phonotekaDownloadsOnly: Boolean)
+    private val selectedFilter = combine(_statusFilter, _phonotekaDownloadsOnly) { status, downloaded ->
+        FilterSelection(status, downloaded)
+    }
     private val allTracks = MutableStateFlow<List<Track>?>(null)
     private val pageLimit = MutableStateFlow(100)
     private data class LoadRequest(val sequence: Int = 0, val delayMs: Long = 0)
@@ -75,17 +84,19 @@ class TrackListViewModel(
 
     private val _batchState = MutableStateFlow(BatchOperationState())
     val batchState: StateFlow<BatchOperationState> = _batchState.asStateFlow()
+    private val _downloadCelebrationTick = MutableStateFlow(0)
+    val downloadCelebrationTick = _downloadCelebrationTick.asStateFlow()
 
     private var batchJob: kotlinx.coroutines.Job? = null
 
     val uiState: StateFlow<ListUiState> = combine(
-        allTracks, _searchQuery.debounce(300), _statusFilter, operation, pageLimit
+        allTracks, _searchQuery.debounce(300), selectedFilter, operation, pageLimit
     ) { all, query, filter, op, limit ->
         when {
             op.error != null -> op.error
             all == null -> ListUiState.Loading
             else -> {
-                val filtered = filterTracks(all, query, filter)
+                val filtered = filterTracks(all, query, filter.status, filter.phonotekaDownloadsOnly)
                 if (filtered.isEmpty()) ListUiState.Empty()
                 else ListUiState.Success(filtered.take(limit), op.refreshing, filtered.size)
             }
@@ -146,13 +157,20 @@ class TrackListViewModel(
     }
     fun onStatusFilterChange(status: TrackStatus?) {
         _statusFilter.value = status
+        _phonotekaDownloadsOnly.value = false
+        pageLimit.value = 100
+    }
+    fun showPhonotekaDownloads() {
+        _statusFilter.value = null
+        _phonotekaDownloadsOnly.value = true
         pageLimit.value = 100
     }
     /** Full catalogue snapshot, independent of the current search, filter and page. */
     fun playbackCatalogue(): List<Track> = allTracks.value.orEmpty()
 
     fun loadMore() {
-        val count = filterTracks(allTracks.value.orEmpty(), _searchQuery.value, _statusFilter.value).size
+        val count = filterTracks(allTracks.value.orEmpty(), _searchQuery.value, _statusFilter.value,
+            _phonotekaDownloadsOnly.value).size
         if (pageLimit.value < count) pageLimit.value = (pageLimit.value + 100).coerceAtMost(count)
     }
     fun refresh() = requestLoad(0)
@@ -266,7 +284,9 @@ class TrackListViewModel(
     fun searchAllPending(source: String = "both") {
         if (!mayWrite()) return
         if (_batchState.value.active) return
-        val pending = allTracks.value.orEmpty().filter { it.status == TrackStatus.PENDING }
+        val pending = allTracks.value.orEmpty().filter {
+            it.status == TrackStatus.PENDING || it.status == TrackStatus.ERROR || it.status == TrackStatus.NOT_FOUND
+        }
         if (pending.isEmpty()) {
             _batchState.value = BatchOperationState(message = "Нет треков для поиска")
             return
@@ -294,7 +314,11 @@ class TrackListViewModel(
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    networkFailureMessage(e)?.let { message ->
+                        _batchState.value = BatchOperationState(message = message, retryOperation = "search")
+                        return@launch
+                    }
                     failed++
                 }
                 delay(500) // Пауза между запросами
@@ -334,7 +358,11 @@ class TrackListViewModel(
                     done++
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    networkFailureMessage(e)?.let { message ->
+                        _batchState.value = BatchOperationState(message = message, retryOperation = "download")
+                        return@launch
+                    }
                     failed++
                 }
                 delay(300)
@@ -391,7 +419,11 @@ class TrackListViewModel(
                     done++
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    networkFailureMessage(e)?.let { message ->
+                        _batchState.value = BatchOperationState(message = message, retryOperation = "search+download")
+                        return@launch
+                    }
                     failed++
                 }
                 delay(500)
@@ -399,6 +431,7 @@ class TrackListViewModel(
             _batchState.value = BatchOperationState(
                 message = "Готово: скачано $done, ошибок $failed из ${toProcess.size}"
             )
+            if (done == toProcess.size && failed == 0 && done > 0) _downloadCelebrationTick.value++
         }
     }
 
@@ -406,6 +439,22 @@ class TrackListViewModel(
         batchJob?.cancel()
         batchJob = null
         _batchState.value = BatchOperationState(message = "Операция отменена")
+    }
+
+    fun retryBatch() {
+        when (_batchState.value.retryOperation) {
+            "search" -> searchAllPending()
+            "download" -> downloadAllReady()
+            "search+download" -> searchAndDownloadAll()
+        }
+    }
+
+    private fun networkFailureMessage(error: Throwable): String? = when (error) {
+        is NoNetworkException -> error.message
+        is MusicSourcesUnavailableException -> error.message
+        is java.net.UnknownHostException, is java.net.ConnectException,
+        is java.net.SocketTimeoutException -> "Музыкальный источник недоступен. Проверьте интернет и повторите."
+        else -> error.cause?.let(::networkFailureMessage)
     }
 
     fun clearBatchMessage() {
@@ -451,14 +500,24 @@ class TrackListViewModel(
         private const val DRAFT_TITLE_KEY = "lab9.trackDraft.title"
         private const val MAX_DRAFT_CHARS = 200
 
-        fun filterTracks(tracks: List<Track>, query: String, status: TrackStatus?): List<Track> {
+        fun filterTracks(tracks: List<Track>, query: String, status: TrackStatus?,
+                         phonotekaDownloadsOnly: Boolean = false): List<Track> {
             val text = query.trim()
             return tracks.filter { track ->
                 (status == null || track.status == status) &&
+                    (!phonotekaDownloadsOnly || isPhonotekaDownload(track)) &&
                     (text.isEmpty() || track.displayName.contains(text, ignoreCase = true) ||
                         track.searchQuery.contains(text, ignoreCase = true))
             }
         }
+
+        /** Local SAF attachments also have DONE status, so provenance must be checked separately. */
+        fun isPhonotekaDownload(track: Track): Boolean =
+            track.status == TrackStatus.DONE &&
+                track.source in setOf("youtube", "soundcloud") &&
+                track.filePath?.let { path ->
+                    path.startsWith("/") && java.io.File(path).parentFile?.name == "downloads"
+                } == true
         fun retryDelay(attempt: Int): Long = if (attempt <= 1) 0 else
             (1000L shl (attempt - 2).coerceAtMost(3)).coerceAtMost(8000)
 

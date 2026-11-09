@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ fun MiniPlayer(
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
     onNext: () -> Unit,
+    onPrevious: () -> Unit = {},
     onDismissError: () -> Unit,
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -91,6 +93,12 @@ fun MiniPlayer(
                 }
 
                 Spacer(Modifier.width(8.dp))
+
+                if (state.hasPrevious) {
+                    IconButton(onClick = onPrevious) {
+                        Icon(Icons.Default.SkipPrevious, contentDescription = "Предыдущий")
+                    }
+                }
 
                 IconButton(onClick = onPlayPause, enabled = track != null && state.isConnected) {
                     Icon(

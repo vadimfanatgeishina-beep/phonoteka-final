@@ -81,7 +81,7 @@ fun LabsHubScreen(onExit: () -> Unit, modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onExit) { Text("← Назад") }
+                    com.phonoteka.ui.components.AppBackTextButton(onExit)
                     Text("Лабораторные 1–7", style = MaterialTheme.typography.titleLarge)
                 }
                 labs.forEach { (route, title) ->
@@ -113,7 +113,7 @@ fun LabsHubScreen(onExit: () -> Unit, modifier: Modifier = Modifier) {
 private fun LabFrame(title: String, onBack: () -> Boolean, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { onBack() }, modifier = Modifier.testTag("labFrameBack")) { Text("← Назад") }
+            com.phonoteka.ui.components.AppBackTextButton({ onBack() }, modifier = Modifier.testTag("labFrameBack"))
             Text(title, style = MaterialTheme.typography.titleLarge)
         }
         content()

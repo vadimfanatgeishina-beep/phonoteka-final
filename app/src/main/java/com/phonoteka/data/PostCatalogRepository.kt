@@ -39,9 +39,14 @@ class RoomPostCatalogRepository(
     private var endReached = false
     override suspend fun isEndReached(): Boolean = pageMutex.withLock { endReached }
 
-    override fun observePosts(query: String): Flow<List<CatalogPost>> = dao.observePosts(query).map { rows -> rows.map { it.toPost() } }
-    override fun observePost(id: Int): Flow<CatalogPost?> = dao.observePost(id).map { it?.toPost() }
-    override fun observeComments(postId: Int): Flow<List<CatalogComment>> = dao.observeComments(postId).map { rows -> rows.map { it.toComment() } }
+    override fun observePosts(query: String): Flow<List<CatalogPost>> = dao.observePosts("").map { rows ->
+        rows.map { MusicEditorial.post(it.toPost()) }
+            .filter { query.isBlank() || it.title.contains(query, ignoreCase = true) || it.body.contains(query, ignoreCase = true) }
+    }
+    override fun observePost(id: Int): Flow<CatalogPost?> = dao.observePost(id).map { it?.toPost()?.let(MusicEditorial::post) }
+    override fun observeComments(postId: Int): Flow<List<CatalogComment>> = dao.observeComments(postId).map { rows ->
+        rows.map { MusicEditorial.comment(it.toComment()) }
+    }
 
     override suspend fun refresh(): CatalogApiError? = withContext(Dispatchers.IO) {
         pageMutex.withLock {

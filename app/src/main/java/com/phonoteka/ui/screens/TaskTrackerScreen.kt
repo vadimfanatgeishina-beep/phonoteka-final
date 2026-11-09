@@ -235,7 +235,7 @@ fun TaskTrackerScreen(
             TopAppBar(
                 title = { Text("Трекер задач · ЛР9") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
+                    com.phonoteka.ui.components.AppBackIconButton(onBack)
                 }
             )
         },

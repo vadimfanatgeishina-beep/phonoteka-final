@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -240,6 +241,38 @@ class TrackListViewModelTest {
         assertEquals(listOf(2L), TrackListViewModel.filterTracks(tracks, "special", null).map { it.id })
         assertEquals(listOf(1L), TrackListViewModel.filterTracks(tracks, "alpha — one", null).map { it.id })
         assertEquals(emptyList<Long>(), TrackListViewModel.filterTracks(tracks, "   ", TrackStatus.REVIEW).map { it.id })
+    }
+
+    @Test
+    fun phonotekaDownloads_excludesLocalAttachmentsAndIncompleteTracks() {
+        val tracks = listOf(
+            track(1, "A", "Downloaded", TrackStatus.DONE).copy(source = "youtube", filePath = "/storage/emulated/0/Android/data/app/files/downloads/a.mp3"),
+            track(2, "B", "Attached", TrackStatus.DONE).copy(source = "local", filePath = "content://audio/2"),
+            track(3, "C", "Unfinished", TrackStatus.READY).copy(source = "soundcloud"),
+            track(4, "D", "Downloaded", TrackStatus.DONE).copy(source = "soundcloud", filePath = "/storage/emulated/0/Android/data/app/files/downloads/d.mp3")
+        )
+        assertEquals(listOf(1L, 4L), TrackListViewModel.filterTracks(tracks, "", null, phonotekaDownloadsOnly = true).map { it.id })
+        assertEquals(3, TrackListViewModel.filterTracks(tracks, "", TrackStatus.DONE).size)
+    }
+
+    @Test
+    fun offlineBatchStopsAndOffersRealRetry() = runTest(mainRule.testDispatcher) {
+        val lib = FakeTrackLibrary(listOf(track(1, "Artist", "Song"), track(2, "Artist", "Second")))
+        lib.searchFailure = com.phonoteka.data.NoNetworkException()
+        val vm = create(lib)
+        advanceUntilIdle()
+
+        vm.searchAllPending()
+        advanceUntilIdle()
+        assertEquals(1, lib.searchCalls)
+        assertEquals("search", vm.batchState.value.retryOperation)
+        assertTrue(vm.batchState.value.message.orEmpty().contains("Нет подключения"))
+
+        lib.searchFailure = null
+        vm.retryBatch()
+        advanceUntilIdle()
+        assertTrue(lib.searchCalls > 1)
+        assertNull(vm.batchState.value.retryOperation)
     }
 
     @Test

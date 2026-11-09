@@ -295,7 +295,7 @@ private fun Lab6Hint(text: String) {
 @Composable
 private fun Lab6Header(title: String, onBack: (() -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (onBack != null) TextButton(onClick = onBack, modifier = Modifier.testTag("lab6Back")) { Text("← Назад") }
+        if (onBack != null) com.phonoteka.ui.components.AppBackTextButton(onBack, modifier = Modifier.testTag("lab6Back"))
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp).testTag("lab6Title"))
     }
 }
@@ -358,7 +358,7 @@ fun Lab6DetailsScreen(vm: LabDetailsViewModel, onBack: () -> Unit) {
                     Text("Элемент не найден", style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.testTag("lab6NotFound"))
                     Text("ID «${s.rawId}» отсутствует в каталоге (1–${LabArticles.all.size}).")
-                    Button(onClick = onBack) { Text("Назад") }
+                    com.phonoteka.ui.components.AppBackTextButton(onBack)
                 }
                 is LabDetailsUiState.Found -> {
                     Text(s.article.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.testTag("lab6DetailsTitle"))
@@ -366,7 +366,7 @@ fun Lab6DetailsScreen(vm: LabDetailsViewModel, onBack: () -> Unit) {
                     Text("Категория: ${s.article.category}" + if (s.article.favorite) " · избранное" else "")
                     s.ref?.let { Text("Откуда пришли (JSON-аргумент): ${it.source}, фильтр ${it.category}") }
                     Lab6Hint("Кнопка «Назад» выполняет popBackStack.")
-                    Button(onClick = onBack) { Text("Назад") }
+                    com.phonoteka.ui.components.AppBackTextButton(onBack)
                 }
             }
         }

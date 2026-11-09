@@ -8,7 +8,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 /** Android SAF adapter is data-layer IO. VM sees only validated bytes/domain states, never Uri. */
-class AndroidJsonDocuments(private val resolver: ContentResolver, private val maxBytes: Int = 5 * 1024 * 1024) {
+class AndroidJsonDocuments(private val resolver: ContentResolver, private val maxBytes: Int = 24 * 1024 * 1024) {
     init { require(maxBytes > 0) }
     suspend fun read(uri: Uri): ByteArray = withContext(Dispatchers.IO) {
         try {

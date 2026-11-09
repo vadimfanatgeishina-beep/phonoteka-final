@@ -8,7 +8,7 @@ import okhttp3.WebSocketListener
 
 /** Debug-only client for the owned localhost TLS lab fixture; never used by production sources. */
 object LocalMockTlsClient {
-    const val PRIMARY_PIN = "sha256/1fqCAYJX7VPXlLJ1ATLQRlxexbVwFpvLtZadUQxYwwU="
+    const val PRIMARY_PIN = "sha256/Oh8QdZbm/OhYPqVjT8cCppyT+TONXWQUYlAmAPXcGGc="
     const val BACKUP_PIN = "sha256/E8OZRSghu3t1p/Z5p2yP7Oa6gMgV7U8EVBGIyiXVWQw="
 
     fun create(hmacKey: ByteArray): OkHttpClient = OkHttpClient.Builder()
