@@ -201,10 +201,17 @@ fun NotesSection(
             )
             NavigationCard(
                 icon = Icons.Default.Download,
-                title = "Архив и резервные копии",
-                description = "Импорт и экспорт зашифрованного архива с изображениями; обычный JSON явно не содержит вложений.",
+                title = "Резервная копия библиотеки",
+                description = "JSON списка треков. Фотографии и тексты заметок в эту копию не входят.",
                 testTag = "notes-open-archive",
                 onClick = onOpenArchive
+            )
+            NavigationCard(
+                icon = Icons.Default.Download,
+                title = "Архив заметок с фотографиями",
+                description = "Открыть заметки к трекам, где находятся сохранение и восстановление фотоархива.",
+                testTag = "notes-open-photo-archive",
+                onClick = onOpenTrackNotes
             )
         }
     }

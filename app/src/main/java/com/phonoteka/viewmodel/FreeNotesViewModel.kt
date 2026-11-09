@@ -12,6 +12,8 @@ import com.phonoteka.data.freenotes.FreeNotesException
 import com.phonoteka.data.freenotes.FreeNotesRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,11 +40,12 @@ data class FreeNotesState(
     val savedToken: Int = 0,
     val saveStatus: NotesSaveStatus = NotesSaveStatus.IDLE,
     val importPreview: ImportPreview? = null,
-    val message: String? = null
+    val message: String? = null,
+    val importing: Boolean = false
 ) {
     val editing: FreeNote? get() = editingId?.let { id -> notes.firstOrNull { it.id == id } }
     val dirty: Boolean get() = changeToken != savedToken
-    val writable: Boolean get() = loaded && loadError == null
+    val writable: Boolean get() = loaded && loadError == null && !importing
 }
 
 class FreeNotesViewModel(
@@ -183,30 +186,38 @@ class FreeNotesViewModel(
         viewModelScope.launch {
             try {
                 val notes = FreeNotesCodec.decode(documents.read(uri))
-                _state.update { it.copy(importPreview = ImportPreview(notes)) }
+                _state.update { it.copy(importPreview = ImportPreview(notes), message = null) }
             } catch (e: FreeNotesException) {
                 _state.update { it.copy(importPreview = null, message = errorText(e.error, loading = false)) }
             }
         }
     }
 
-    fun cancelImport() = _state.update { it.copy(importPreview = null, message = "Импорт отменён, заметки не изменены") }
+    fun cancelImport() = _state.update { if (it.importing) it else it.copy(importPreview = null, message = "Импорт отменён, заметки не изменены") }
 
     /** Шаг 2: замена текущих заметок импортированными и немедленная запись. Работает и для восстановления после повреждения. */
     fun confirmImport() {
         val preview = _state.value.importPreview ?: return
+        if (_state.value.importing) return
         autosaveJob?.cancel()
+        _state.update { it.copy(importing = true, saveStatus = NotesSaveStatus.SAVING, message = null) }
         viewModelScope.launch {
-            try {
-                if (_state.value.loadError != null) repository.quarantineCorrupt(clock())
-                _state.update {
-                    it.copy(notes = preview.notes, loadError = null, editingId = null, importPreview = null,
-                        changeToken = it.changeToken + 1, saveStatus = NotesSaveStatus.PENDING)
+            // Once explicitly confirmed, finish one commit even if the editor is leaving the screen.
+            withContext(NonCancellable) {
+                saveMutex.withLock {
+                    try {
+                        if (_state.value.loadError != null) repository.preserveCorruptForImport(clock())
+                        repository.save(preview.notes)
+                        _state.update {
+                            val token = it.changeToken + 1
+                            it.copy(notes = preview.notes, loadError = null, editingId = null, importPreview = null,
+                                changeToken = token, savedToken = token, saveStatus = NotesSaveStatus.SAVED,
+                                message = "Импортировано заметок: ${preview.count}")
+                        }
+                    } catch (e: FreeNotesException) {
+                        _state.update { it.copy(saveStatus = NotesSaveStatus.ERROR, message = errorText(e.error, loading = false)) }
+                    } finally { _state.update { it.copy(importing = false) } }
                 }
-                persist()
-                _state.update { it.copy(message = "Импортировано заметок: ${preview.count}") }
-            } catch (e: FreeNotesException) {
-                _state.update { it.copy(importPreview = null, message = errorText(e.error, loading = false)) }
             }
         }
     }

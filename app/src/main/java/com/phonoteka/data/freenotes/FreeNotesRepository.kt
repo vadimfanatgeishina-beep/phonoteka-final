@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import com.phonoteka.data.replaceAtomically
 
 /**
  * ЛР11 (база): НЕЗАВИСИМЫЕ заметки — не привязаны к треку.
@@ -102,7 +103,8 @@ object FreeNotesCodec {
 /** Файловый репозиторий. Всё IO — на [io]; запись tmp + atomic rename; битый файл не перезаписывается молча. */
 class FreeNotesRepository(
     private val file: File,
-    private val io: CoroutineDispatcher = Dispatchers.IO
+    private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val replaceFile: (File, File) -> Boolean = ::replaceAtomically
 ) {
     /** Пустой список, если файла нет. */
     suspend fun load(): List<FreeNote> = withContext(io) {
@@ -119,14 +121,21 @@ class FreeNotesRepository(
         try {
             dir.mkdirs()
             tmp.outputStream().use { out -> out.write(bytes); out.fd.sync() }
-            // java.nio.file.Files доступен только с API 26, minSdk = 24. rename(2) в пределах одного
-            // каталога атомарно заменяет файл на Linux/Android; запасной путь — для FS без замены при rename.
-            if (!tmp.renameTo(file)) {
-                if (file.exists() && !file.delete()) throw IOException("Cannot replace notes file")
-                if (!tmp.renameTo(file)) throw IOException("Cannot move notes file")
-            }
+            if (!replaceFile(tmp, file)) throw IOException("Cannot replace notes file atomically")
         } catch (e: IOException) {
             tmp.delete(); throw FreeNotesException(FreeNotesError.IO, e)
+        }
+    }
+
+    /** Preserve damaged input before a confirmed import without removing the current file before commit. */
+    suspend fun preserveCorruptForImport(now: Long): File? = withContext(io) {
+        if (!file.exists()) return@withContext null
+        val target = File(file.absoluteFile.parentFile, "${file.name}.corrupt-$now-${java.util.UUID.randomUUID()}")
+        try {
+            file.inputStream().use { input -> target.outputStream().use { output -> input.copyTo(output); output.fd.sync() } }
+            target
+        } catch (failure: IOException) {
+            target.delete(); throw FreeNotesException(FreeNotesError.IO, failure)
         }
     }
 

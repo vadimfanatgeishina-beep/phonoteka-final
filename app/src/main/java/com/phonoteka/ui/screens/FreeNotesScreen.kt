@@ -21,6 +21,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -155,7 +158,7 @@ fun FreeNotesContent(
                 }
                 if (state.notes.isEmpty()) Text("Заметок пока нет")
                 LazyColumn(Modifier.fillMaxWidth().testTag(FreeNotesTags.LIST), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(state.notes, key = { it.id }) { note -> NoteRow(note, onOpen) }
+                    items(state.notes.sortedByDescending { it.updatedAt }, key = { it.id }) { note -> NoteRow(note, onOpen) }
                 }
             }
         }
@@ -163,11 +166,14 @@ fun FreeNotesContent(
 
     state.importPreview?.let { preview ->
         AlertDialog(
-            onDismissRequest = onCancelImport,
+            onDismissRequest = { if (!state.importing) onCancelImport() },
             title = { Text("Заменить заметки?") },
-            text = { Text("В файле заметок: ${preview.count}. Текущие заметки (${state.notes.size}) будут заменены.") },
-            confirmButton = { TextButton(onClick = onConfirmImport, modifier = Modifier.testTag("importConfirm")) { Text("Заменить") } },
-            dismissButton = { TextButton(onClick = onCancelImport, modifier = Modifier.testTag("importCancel")) { Text("Отмена") } }
+            text = { Column {
+                Text("В файле заметок: ${preview.count}. Текущие заметки (${state.notes.size}) будут заменены.")
+                state.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            } },
+            confirmButton = { TextButton(onClick = onConfirmImport, enabled = !state.importing, modifier = Modifier.testTag("importConfirm")) { Text(if (state.importing) "Сохранение…" else "Заменить") } },
+            dismissButton = { TextButton(onClick = onCancelImport, enabled = !state.importing, modifier = Modifier.testTag("importCancel")) { Text("Отмена") } }
         )
     }
 }
@@ -178,6 +184,8 @@ private fun NoteRow(note: FreeNote, onOpen: (String) -> Unit) {
         Column(Modifier.padding(12.dp)) {
             Text(note.title.ifBlank { "Без названия" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (note.body.isNotBlank()) Text(note.body, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(if (note.updatedAt > 0) "Изменено: " + java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(note.updatedAt))
+                else "Дата изменения неизвестна", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -190,6 +198,7 @@ private fun NoteEditor(
     onDelete: (String) -> Unit,
     onClose: () -> Unit
 ) {
+    var confirmDelete by remember(note.id) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(value = note.title, onValueChange = { onTitle(note.id, it) }, label = { Text("Заголовок") },
             singleLine = true, modifier = Modifier.fillMaxWidth().testTag(FreeNotesTags.TITLE))
@@ -197,7 +206,7 @@ private fun NoteEditor(
             minLines = 6, modifier = Modifier.fillMaxWidth().testTag(FreeNotesTags.BODY))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AppButton(Modifier, text = "Готово", onClick = onClose, style = AppButtonStyle.PRIMARY, size = AppButtonSize.MEDIUM)
-            AppButton(Modifier.testTag(FreeNotesTags.DELETE), text = "Удалить", onClick = { onDelete(note.id) }, style = AppButtonStyle.OUTLINED, size = AppButtonSize.MEDIUM)
+            AppButton(Modifier.testTag(FreeNotesTags.DELETE), text = "Удалить", onClick = { confirmDelete = true }, style = AppButtonStyle.OUTLINED, size = AppButtonSize.MEDIUM)
             // ЛР16 hardening: текст помечается sensitive и стирается из буфера через 30 с.
             val context = androidx.compose.ui.platform.LocalContext.current
             AppButton(Modifier.testTag("noteCopy"), text = "Копировать", onClick = {
@@ -205,4 +214,9 @@ private fun NoteEditor(
             }, style = AppButtonStyle.OUTLINED, size = AppButtonSize.MEDIUM)
         }
     }
+    if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false },
+        title = { Text("Удалить заметку?") },
+        text = { Text("Заметка будет удалена. Это действие нельзя отменить после сохранения.") },
+        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete(note.id) }, modifier = Modifier.testTag("freeNoteDeleteConfirm")) { Text("Удалить") } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }, modifier = Modifier.testTag("freeNoteDeleteCancel")) { Text("Отмена") } })
 }
