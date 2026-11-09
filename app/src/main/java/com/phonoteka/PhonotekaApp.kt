@@ -13,6 +13,8 @@ import com.phonoteka.security.PreferencesMockAuthStateStore
 import com.phonoteka.security.SecurityDecisions
 import com.phonoteka.data.notes.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import java.io.File
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -34,7 +36,39 @@ class PhonotekaApp : Application() {
     fun clearStepUpSession() { riskStepUp.invalidate(); auditStepUp.gate.invalidate(); elevatedAfterBackground = false }
     /** ЛР15: блокировка/выход закрывают живой сокет, привязанный к прежнему пользователю. */
     val principalChanges = com.phonoteka.security.PrincipalChangeSignal()
-    fun invalidateProtectedSession() { clearStepUpSession(); inviteAuthority.revokeAll(); principalChanges.signal() }
+    fun invalidateProtectedSession() {
+        clearStepUpSession(); inviteAuthority.revokeAll(); principalChanges.signal()
+        if (phoneAccountsLazy.isInitialized()) phoneAccounts.invalidate()
+    }
+    private val identityScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val phoneAccountsLazy = lazy {
+        com.phonoteka.identity.PhoneAccountsController(this,
+            requireLocalOwner = {
+                if (!localAuth.isSessionActive() || roleSession.activeQuickAccess != null)
+                    throw SecurityException("Local owner PIN/biometric session required")
+            },
+            principalChanged = { clearStepUpSession(); principalChanges.signal() },
+            audit = { event ->
+                val denied = event.type == com.phonoteka.identity.IdentityEventType.LOGIN_DENIED ||
+                    event.type == com.phonoteka.identity.IdentityEventType.REFRESH_REPLAY
+                val type = when (event.type) {
+                    com.phonoteka.identity.IdentityEventType.LOGIN_SUCCESS -> com.phonoteka.security.AuditEventType.LOGIN
+                    com.phonoteka.identity.IdentityEventType.LOGIN_DENIED -> com.phonoteka.security.AuditEventType.LOGIN_FAILED
+                    com.phonoteka.identity.IdentityEventType.LOGOUT -> com.phonoteka.security.AuditEventType.LOGOUT
+                    else -> com.phonoteka.security.AuditEventType.SESSION
+                }
+                unifiedAudit.record(type = type,
+                    source = com.phonoteka.security.AuditSource.AUTH,
+                    userId = event.actorId?.let { "server:$it" } ?: "unverified", role = "SERVER",
+                    action = "identity.${event.type.name.lowercase()}", subject = event.subjectId ?: "account",
+                    result = if (denied) "DENIED" else "OK")
+            }).also { accounts ->
+                identityScope.launch {
+                    localAuth.authenticationSnapshotFlow.collect { if (it.authenticatedAt == null) accounts.invalidate() }
+                }
+            }
+    }
+    val phoneAccounts get() = phoneAccountsLazy.value
 
     /**
      * Единый журнал событий ЛР13/14/15/16.

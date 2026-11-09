@@ -49,7 +49,9 @@ fun ProfileScreen(
     stats: ProfileStats,
     accessRole: String,
     sessionActive: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    serverUser: com.phonoteka.identity.IdentityUser? = null,
+    onOpenAccount: (() -> Unit)? = null
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -142,6 +144,15 @@ fun ProfileScreen(
                     Icon(Icons.Default.Edit, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Редактировать")
+                }
+                onOpenAccount?.let { open ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(serverUser?.let { "Аккаунт сервера: ${it.login}" } ?: "Серверный аккаунт не подключён")
+                            serverUser?.let { Text("Роль на сервере: ${it.role.name}") }
+                            TextButton(onClick = open) { Text("Аккаунт и устройства") }
+                        }
+                    }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatTile("В библиотеке", stats.totalTracks, Modifier.weight(1f))

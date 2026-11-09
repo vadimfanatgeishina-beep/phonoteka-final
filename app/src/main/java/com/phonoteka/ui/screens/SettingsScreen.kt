@@ -90,6 +90,9 @@ fun SettingsScreen(
             SettingsCategoryItem(icon = Icons.Default.Person, title = "Мой профиль",
                 subtitle = "Аватар, ник, описание и статистика библиотеки",
                 onClick = { onNavigateToSubScreen("settings/profile") })
+            SettingsCategoryItem(icon = Icons.Default.Person, title = "Аккаунт и устройства",
+                subtitle = "Сервер на втором телефоне, вход, права и активные сессии",
+                onClick = { onNavigateToSubScreen("settings/account") })
             if (com.phonoteka.BuildConfig.DEBUG) androidx.compose.material3.TextButton(onClick = { onNavigateToSubScreen("settings/lab9-measure") }) { Text("ЛР9 · окно измерения") }
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column {

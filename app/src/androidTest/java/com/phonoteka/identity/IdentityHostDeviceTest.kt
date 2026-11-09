@@ -18,20 +18,20 @@ class IdentityHostDeviceTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val name = "tls-test-${UUID.randomUUID()}"
         val alias = "phonoteka.identity.$name.aes.v1"
-        var ownerAuthenticated = true
-        val gate = { check(ownerAuthenticated) { "Local owner authentication required" } }
+        val ownerAuthenticated = java.util.concurrent.atomic.AtomicBoolean(true)
+        val gate = { check(ownerAuthenticated.get()) { "Local owner authentication required" } }
         lateinit var token: String
         try {
             AndroidIdentityHost.open(context, gate, name).use { host ->
                 assertTrue(host.needsOwner)
                 assertTrue(runCatching { host.start("127.0.0.1") }.isFailure)
-                ownerAuthenticated = false
+                ownerAuthenticated.set(false)
                 assertTrue(runCatching { host.provisionOwner("owner", "owner-device-test-password") }.isFailure)
-                ownerAuthenticated = true
+                ownerAuthenticated.set(true)
                 host.provisionOwner("owner", "owner-device-test-password")
-                ownerAuthenticated = false
+                ownerAuthenticated.set(false)
                 assertTrue(runCatching { host.start("127.0.0.1") }.isFailure)
-                ownerAuthenticated = true
+                ownerAuthenticated.set(true)
                 val endpoint = host.start("127.0.0.1")
                 run {
                     val client = endpoint.client()
@@ -47,6 +47,10 @@ class IdentityHostDeviceTest {
                             .header("Authorization", "Bearer $token").build()).execute().use {
                             assertEquals(200, it.code); assertEquals("ADMIN", JSONObject(it.body!!.string()).getString("role"))
                         }
+                        ownerAuthenticated.set(false)
+                        client.newCall(Request.Builder().url(endpoint.baseUrl + "/me")
+                            .header("Authorization", "Bearer $token").build()).execute().use { assertEquals(503, it.code) }
+                        ownerAuthenticated.set(true)
                     } finally { client.dispatcher.executorService.shutdown(); client.connectionPool.evictAll() }
                     PhoneIdentityClient(endpoint).use { account ->
                         assertEquals(IdentityRole.ADMIN, account.login("owner", "owner-device-test-password", "Android API client").role)

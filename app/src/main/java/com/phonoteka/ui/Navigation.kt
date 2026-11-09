@@ -342,6 +342,7 @@ private fun SectionNavHost(
             composable("settings/general") { GeneralSettingsScreen(viewModel = settingsViewModel, onBack = onBack) }
             composable("settings/notifications") { NotificationsSettingsScreen(onBack = onBack) }
             composable("settings/theme") { ThemeSettingsScreen(viewModel = settingsViewModel, onBack = onBack) }
+            composable("settings/account") { com.phonoteka.ui.screens.PhoneAccountScreen(application.phoneAccounts, onBack) }
 
             // ЛР10: пост-каталог — тип контента общей ленты, а не отдельное приложение.
             composable("catalog/posts") {
@@ -413,12 +414,15 @@ private fun SectionNavHost(
                 val review by trackListViewModel.reviewCount.collectAsState(initial = 0)
                 val role by application.roleSession.changes.collectAsStateWithLifecycle()
                 val authSnapshot by application.localAuth.authenticationSnapshotFlow.collectAsStateWithLifecycle()
+                val serverAccount by application.phoneAccounts.state.collectAsStateWithLifecycle()
                 com.phonoteka.ui.screens.ProfileScreen(
                     viewModel = profileViewModel,
                     stats = com.phonoteka.ui.screens.ProfileStats(total, done, review),
                     accessRole = role.name,
                     sessionActive = authSnapshot.authenticatedAt != null,
-                    onBack = onBack
+                    onBack = onBack,
+                    serverUser = serverAccount.user,
+                    onOpenAccount = { controller.navigate("settings/account") }
                 )
             }
 

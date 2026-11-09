@@ -26,7 +26,8 @@ class AndroidIdentityHost private constructor(
         check(!closed && provisioned) { "Provision the local owner before starting identity service" }
         requireLocalOwner()
         check(server == null) { "Identity server is already running" }
-        return IdentityHostTls.start(authority, host).also { server = it }.endpoint
+        return IdentityHostTls.start(authority, host, allowRequest = { runCatching { requireLocalOwner() }.isSuccess })
+            .also { server = it }.endpoint
     }
 
     @Synchronized fun stop() {

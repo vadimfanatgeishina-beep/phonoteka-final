@@ -19,7 +19,8 @@ import javax.net.ssl.SSLSocket
 class IdentityTlsServer(
     factory: SSLServerSocketFactory,
     private val router: IdentityApiRouter,
-    bindAddress: InetAddress = InetAddress.getByName("0.0.0.0")
+    bindAddress: InetAddress = InetAddress.getByName("0.0.0.0"),
+    private val allowRequest: () -> Boolean = { true }
 ) : AutoCloseable {
     private val listener = (factory.createServerSocket(0, 8, bindAddress) as SSLServerSocket).apply {
         enabledProtocols = supportedProtocols.filter { it == "TLSv1.2" || it == "TLSv1.3" }.toTypedArray()
@@ -103,7 +104,11 @@ class IdentityTlsServer(
                 socket.startHandshake()
                 val response = try {
                     val req = request(BufferedInputStream(socket.inputStream))
-                    try { router.handle(req.method, req.path, req.headers, req.body) }
+                    try {
+                        if (allowRequest()) router.handle(req.method, req.path, req.headers, req.body)
+                        else IdentityApiResponse(503, mapOf("Cache-Control" to "no-store", "Content-Type" to "application/json"),
+                            "{\"error\":\"host_locked\"}".toByteArray())
+                    }
                     finally { req.body.fill(0) }
                 } catch (bad: BadRequest) {
                     IdentityApiResponse(bad.status, mapOf("Cache-Control" to "no-store", "Content-Type" to "application/json"),

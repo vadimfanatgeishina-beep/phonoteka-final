@@ -85,6 +85,7 @@ class MainActivity : FragmentActivity() {
                     val remaining = authManager.remainingSessionMillis()
                     if (remaining == 0L) {
                         authManager.lock(); app.lab13MockSession.forgetAccessSession()
+                        app.invalidateProtectedSession()
                         biometricSaved = app.biometricRefresh.hasSavedRefresh()
                         sessionNotice = "Сессия истекла. Войдите снова — затем вернётесь к прежнему экрану."
                         sessionUnlocked = false
@@ -162,6 +163,7 @@ class MainActivity : FragmentActivity() {
         if (backgroundAt != 0L && android.os.SystemClock.elapsedRealtime() - backgroundAt >= 30 * 60_000L) {
             authManager.lock()
             (application as PhonotekaApp).lab13MockSession.forgetAccessSession()
+            (application as PhonotekaApp).invalidateProtectedSession()
             biometricSaved = (application as PhonotekaApp).biometricRefresh.hasSavedRefresh()
             sessionNotice = "Сессия истекла. Войдите снова — затем вернётесь к прежнему экрану."
             sessionUnlocked = false

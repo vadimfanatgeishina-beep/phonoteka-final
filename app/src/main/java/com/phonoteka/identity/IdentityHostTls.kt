@@ -61,12 +61,12 @@ class IdentityHostTls private constructor(val endpoint: IdentityTlsEndpoint, pri
 
     companion object {
         /** Call on an IO dispatcher, after local owner provisioning and before exposing a pairing QR. */
-        fun start(authority: PhoneIdentityAuthority, host: String): IdentityHostTls {
+        fun start(authority: PhoneIdentityAuthority, host: String, allowRequest: () -> Boolean = { true }): IdentityHostTls {
             validateIdentityHost(host)
             val certificate = HeldCertificate.Builder().commonName("Phonoteka owned identity host")
                 .addSubjectAlternativeName(host).duration(1, TimeUnit.DAYS).build()
             val tls = HandshakeCertificates.Builder().heldCertificate(certificate).build()
-            val server = IdentityTlsServer(tls.sslContext().serverSocketFactory, IdentityApiRouter(authority), InetAddress.getByName(host))
+            val server = IdentityTlsServer(tls.sslContext().serverSocketFactory, IdentityApiRouter(authority), InetAddress.getByName(host), allowRequest)
             return IdentityHostTls(IdentityTlsEndpoint(host, server.port, CertificatePinner.pin(certificate.certificate)), server)
         }
     }

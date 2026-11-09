@@ -14,6 +14,7 @@ object AppRoutes {
     private val byLegacyRoute: Map<String, Target> = mapOf(
         // Профиль открывается из настроек.
         "settings/profile" to Target(MainSection.SETTINGS, "profile/edit"),
+        "settings/account" to Target(MainSection.SETTINGS, "settings/account"),
         // ЛР9 — трекер задач и окно измерения анимаций.
         "settings/tasks" to Target(MainSection.HOME, "tasks"),
         "settings/lab9-measure" to Target(MainSection.HOME, "settings/lab9-measure"),
