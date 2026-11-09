@@ -99,8 +99,8 @@ fun SettingsScreen(
                     SettingsCategoryItem(icon = Icons.Default.Tune, title = "Заметки · ЛР11",
                         subtitle = "Независимые заметки, автосохранение, импорт/экспорт", onClick = { onNavigateToSubScreen("settings/lab11/free-notes") })
                     HorizontalDivider()
-                    SettingsCategoryItem(icon = Icons.Default.Tune, title = "Лабораторные 1–7",
-                        subtitle = "Первый экран, лейауты, состояние, списки, навигация, загрузка", onClick = { onNavigateToSubScreen("settings/labs1to7") })
+                    SettingsCategoryItem(icon = Icons.Default.Tune, title = "Учебные примеры ЛР1–7",
+                        subtitle = "Исходные демонстрации Compose; реальные функции работают в разделах Фонотеки", onClick = { onNavigateToSubScreen("settings/labs1to7") })
                 }
             }
             Text("Категории настроек", style = MaterialTheme.typography.titleSmall)

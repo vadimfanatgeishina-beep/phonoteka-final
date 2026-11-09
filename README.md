@@ -18,6 +18,8 @@ APK находятся в `app/build/outputs/apk/vulnerable/debug/` и `app/buil
 
 Переключатели защит учебного стенда описаны в [RUNTIME_SECURITY_CONTROLS.md](RUNTIME_SECURITY_CONTROLS.md). Полноценного удалённого аккаунта и синхронизации между телефонами сейчас нет.
 
+Соответствие первых семи лабораторных реальным действиям общей Фонотеки описано в [LABS_1_7_INTEGRATION.md](LABS_1_7_INTEGRATION.md). Отдельный раздел с исходными примерами Compose сохранён для показа учебных упражнений.
+
 > Актуальный этап: FINAL_STEP3.md / lab_reports/final_step3/RESULTS.md. Предыдущие отчёты исторические; Android acceptance не наследуется.
 
 > Текущий этап: FINAL_STEP2.md / lab_reports/final_step2/RESULTS.md. Предыдущие evidence относятся к предыдущим снимкам; device acceptance не наследуется.
