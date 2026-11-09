@@ -23,7 +23,8 @@ class AudioDownloader(
     injectedClient: OkHttpClient? = null,
     private val byteLimit: Long = 200L * 1024 * 1024,
     private val playlistLimit: Int = 2 * 1024 * 1024,
-    private val segmentLimit: Int = 2000
+    private val segmentLimit: Int = 2000,
+    private val validateFile: (File) -> Unit = {}
 ) {
 
     private val client = (injectedClient ?: OkHttpClient.Builder()
@@ -56,6 +57,8 @@ class AudioDownloader(
         partial.delete()
         try {
             val result = downloadToFile(audioUrl, partial, onProgress)
+            if (result.bytes <= 0) throw IOException("Источник вернул пустой аудиофайл")
+            validateFile(partial) // Validate before replacing an existing usable download.
             val backup = File(destination.parentFile, destination.name + ".previous")
             backup.delete()
             val hadDestination = destination.exists()

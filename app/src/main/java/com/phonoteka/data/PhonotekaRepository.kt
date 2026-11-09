@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import com.phonoteka.network.AudioDownloader
+import com.phonoteka.network.validateDownloadedAudio
 import com.phonoteka.network.Id3Tagger
 import com.phonoteka.network.StreamSearcher
 import java.io.File
@@ -31,7 +32,7 @@ class PhonotekaRepository(
     private fun requireWrite(resource: String) = requireAccess(com.phonoteka.security.DemoScope.LIBRARY_WRITE, resource)
     private val importMutex = Mutex()
     private val searcher = StreamSearcher()
-    private val downloader = AudioDownloader()
+    private val downloader = AudioDownloader(validateFile = ::validateDownloadedAudio)
 
     /**
      * Флаг в SharedPreferences: если true, importFromAssets() больше не импортирует

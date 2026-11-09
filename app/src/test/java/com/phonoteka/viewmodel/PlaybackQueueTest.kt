@@ -25,7 +25,7 @@ class PlaybackQueueTest {
     }
 
     @Test fun remoteRawAndMissingUrisAreRejected() {
-        listOf(null, "", "content://", "file:///a.mp3", "https://example.com/a.mp3")
+        listOf(null, "", "content://", "file:///", "file://remote/a.mp3", "https://example.com/a.mp3")
             .forEach { assertFalse("Unexpected playable URI: $it", local(1).copy(filePath = it).isLocallyPlayable()) }
     }
 
@@ -63,6 +63,12 @@ class PlaybackQueueTest {
         val track = sessionTrack("5", "Artist 5", "Song 5", downloaded(5).filePath)!!
         assertEquals(downloaded(5).filePath, track.filePath)
         assertTrue(track.isLocallyPlayable())
+    }
+
+    @Test fun sessionFileUriCanBeQueuedAgain() {
+        val restored = sessionTrack("5", "Artist", "Song", "file:///storage/emulated/0/Music/song.mp3")!!
+        assertTrue(restored.isLocallyPlayable())
+        assertEquals(listOf(restored), localPlaybackQueue(restored, emptyList()))
     }
 
     @Test fun invalidSessionIdentityIsNotInvented() {

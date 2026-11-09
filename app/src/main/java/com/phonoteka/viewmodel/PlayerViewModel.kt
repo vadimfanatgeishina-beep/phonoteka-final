@@ -43,6 +43,8 @@ fun Track.isLocallyPlayable(): Boolean {
     val path = filePath ?: return false
     // SAF content URI (local file picked through system picker)
     if (path.startsWith("content://") && path.length > "content://".length) return true
+    // MediaSession returns downloaded paths as file:// URIs after IPC.
+    if (path.startsWith("file:///")) return path.length > "file:///".length
     // Downloaded file on disk (from YouTube/SoundCloud via AudioDownloader)
     if (path.startsWith("/")) return true
     return false

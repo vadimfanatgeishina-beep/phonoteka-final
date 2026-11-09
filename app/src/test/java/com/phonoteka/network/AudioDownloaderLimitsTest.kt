@@ -11,6 +11,20 @@ import java.io.File
 
 class AudioDownloaderLimitsTest {
     @get:Rule val temporary = TemporaryFolder()
+    @Test fun disconnectedDownloadPreservesOldFileAndCanBeRetried() = runTest {
+        fixture { server, client ->
+            val target = File(temporary.newFolder(), "audio.mp3").apply { writeText("original") }
+            server.enqueue(MockResponse().setBody("a".repeat(16384))
+                .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
+            assertTrue(runCatching { AudioDownloader(client).download(server.url("/broken").toString(), target) }.isFailure)
+            assertEquals("original", target.readText())
+            assertFalse(File(target.parentFile, target.name + ".part").exists())
+            server.enqueue(MockResponse().setBody("replacement"))
+            AudioDownloader(client).download(server.url("/retry").toString(), target)
+            assertEquals("replacement", target.readText())
+            assertEquals(2, server.requestCount)
+        }
+    }
     @Test fun oversizeKnownAndChunkedBodiesPreserveOldDestinationAndRemovePartial() = runTest {
         for (chunked in listOf(false, true)) {
             fixture { server, client ->
@@ -23,6 +37,7 @@ class AudioDownloaderLimitsTest {
                 catch (_: java.io.IOException) { rejected = true }
                 assertTrue(rejected); assertEquals("original", destination.readText())
                 assertFalse(File(destination.parentFile, destination.name + ".part").exists())
+                assertEquals(1, server.requestCount)
             }
         }
     }
@@ -34,15 +49,18 @@ class AudioDownloaderLimitsTest {
             try { AudioDownloader(client, playlistLimit = 32).download(server.url("/playlist").toString(), target) }
             catch (_: java.io.IOException) { rejected = true }
             assertTrue(rejected); assertFalse(target.exists())
+            assertEquals(1, server.requestCount)
             server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", "http://localhost:1/not-contacted"))
             rejected = false
             try { AudioDownloader(client).download(server.url("/redirect").toString(), target) }
             catch (_: java.io.IOException) { rejected = true }
             assertTrue(rejected); assertFalse(target.exists())
+            assertEquals(2, server.requestCount)
         }
     }
     private suspend fun fixture(block: suspend (MockWebServer, OkHttpClient) -> Unit) {
-        val cert = HeldCertificate.Builder().addSubjectAlternativeName("localhost").build()
+        val cert = HeldCertificate.Builder().addSubjectAlternativeName("localhost")
+            .addSubjectAlternativeName("127.0.0.1").build()
         val serverTls = HandshakeCertificates.Builder().heldCertificate(cert).build()
         val clientTls = HandshakeCertificates.Builder().addTrustedCertificate(cert.certificate).build()
         val server = MockWebServer(); server.useHttps(serverTls.sslSocketFactory(), false); server.start()
